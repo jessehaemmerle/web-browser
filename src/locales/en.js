@@ -222,5 +222,32 @@ module.exports = {
   'reset.appearance': 'Appearance', 'reset.layout': 'Layout', 'reset.newTab': 'New tab', 'reset.search': 'Search', 'reset.privacy': 'Privacy', 'reset.shortcuts': 'Shortcuts', 'reset.tabs': 'Tabs',
 
   'about.profile': 'Profile folder', 'about.profileHint': 'Settings, bookmarks and history are stored here.', 'about.license': 'Licence',
-  'about.licenseText': 'Free software under the GNU General Public License v3.', 'about.source': 'Source code'
+  'about.licenseText': 'Free software under the GNU General Public License v3.', 'about.source': 'Source code',
+  // tab styles
+  "set.tabStyle": "Tab style",
+  "set.tabStyleHint": "How tabs are shown. Every style works on top and on the side.",
+  "tabstyle.classic": "Classic",
+  "tabstyle.classic.desc": "Tabs of equal width, as usual.",
+  "tabstyle.drift": "Drift",
+  "tabstyle.drift.desc": "Tabs shrink the longer you leave them – down to a small drop.",
+  "tabstyle.lens": "Lens",
+  "tabstyle.lens.desc": "Narrow tabs that open up under the pointer.",
+  "tabstyle.thread": "Thread",
+  "tabstyle.thread.desc": "A thread shows which tab another one was opened from.",
+  "tabstyle.combo": "Drift + Thread",
+  "tabstyle.combo.desc": "Ageing and origin at once.",
+  "set.tabPreview": "Preview on hover",
+  "set.tabPreviewHint": "Shows title, address and a picture of the page.",
+  "set.tabTint": "Site colour in the tab",
+  "set.tabTintHint": "The active tab subtly takes on the website’s colour.",
+  "set.tabPulse": "Activity pulse",
+  "set.tabPulseHint": "Loading wave, audio bars instead of a speaker and a dot for news in background tabs.",
+  "set.tabStacks": "Stacks per site",
+  "set.tabStacksHint": "Three or more background tabs of the same site become a stack that fans out on hover.",
+  "stack.tabs": "{count} tabs",
+  "stack.label": "{count} tabs from {host}",
+  "preview.sleeping": "Asleep – reloads when opened",
+  "preview.playing": "Playing audio",
+  "preview.muted": "Muted",
+  "menu.tabStyle": "Tab style"
 };

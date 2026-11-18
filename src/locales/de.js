@@ -248,5 +248,32 @@ module.exports = {
 
   // about
   'about.profile': 'Profilordner', 'about.profileHint': 'Hier liegen Einstellungen, Lesezeichen und Verlauf.', 'about.license': 'Lizenz',
-  'about.licenseText': 'Freie Software unter der GNU General Public License v3.', 'about.source': 'Quellcode'
+  'about.licenseText': 'Freie Software unter der GNU General Public License v3.', 'about.source': 'Quellcode',
+  // tab styles
+  "set.tabStyle": "Tab-Stil",
+  "set.tabStyleHint": "Wie Tabs dargestellt werden. Alle Stile funktionieren oben und seitlich.",
+  "tabstyle.classic": "Klassisch",
+  "tabstyle.classic.desc": "Gleich breite Tabs, wie gewohnt.",
+  "tabstyle.drift": "Drift",
+  "tabstyle.drift.desc": "Tabs schrumpfen, je länger du sie nicht nutzt – bis zum kleinen Tropfen.",
+  "tabstyle.lens": "Lupe",
+  "tabstyle.lens.desc": "Schmale Tabs, die unter dem Mauszeiger aufgehen.",
+  "tabstyle.thread": "Faden",
+  "tabstyle.thread.desc": "Ein Faden zeigt, aus welchem Tab ein Tab geöffnet wurde.",
+  "tabstyle.combo": "Drift + Faden",
+  "tabstyle.combo.desc": "Altern und Herkunft zugleich.",
+  "set.tabPreview": "Vorschau beim Überfahren",
+  "set.tabPreviewHint": "Zeigt Titel, Adresse und ein Bild der Seite.",
+  "set.tabTint": "Seitenfarbe im Tab",
+  "set.tabTintHint": "Der aktive Tab übernimmt dezent die Farbe der Website.",
+  "set.tabPulse": "Aktivitätspuls",
+  "set.tabPulseHint": "Ladewelle, Tonwelle statt Lautsprecher und ein Punkt bei Neuigkeiten in Hintergrund-Tabs.",
+  "set.tabStacks": "Stapel pro Website",
+  "set.tabStacksHint": "Ab drei Hintergrund-Tabs derselben Website werden sie zu einem Stapel, der sich beim Überfahren auffächert.",
+  "stack.tabs": "{count} Tabs",
+  "stack.label": "{count} Tabs von {host}",
+  "preview.sleeping": "Schläft – lädt beim Öffnen neu",
+  "preview.playing": "Spielt Ton ab",
+  "preview.muted": "Stummgeschaltet",
+  "menu.tabStyle": "Tab-Stil"
 };

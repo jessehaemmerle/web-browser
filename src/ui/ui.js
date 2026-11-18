@@ -52,6 +52,15 @@
   const below = (node) => { const r = node.getBoundingClientRect(); return { x: Math.round(r.left), y: Math.round(r.bottom + 2) }; };
   const escapeHtml = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
+  // the UI is drawn above the pages while any of these need it (popover, preview, split drag)
+  const overlayUsers = new Set();
+  function overlayUse(key, on) {
+    const before = overlayUsers.size > 0;
+    if (on) overlayUsers.add(key); else overlayUsers.delete(key);
+    const after = overlayUsers.size > 0;
+    if (before !== after) call('setOverlay', after);
+  }
+
   function applyI18n(root = document) {
     for (const n of $$('[data-i18n]', root)) n.textContent = t(n.dataset.i18n);
     for (const n of $$('[data-i18n-title]', root)) { n.title = t(n.dataset.i18nTitle); n.setAttribute('aria-label', n.title); }
@@ -65,6 +74,7 @@
     $('#theme-vars').textContent = theme.css;
     $('#user-css').textContent = S.appearance.uiCss || '';
     document.documentElement.dataset.scheme = theme.scheme;
+    document.body.classList.toggle('no-anim', S.appearance.animations === false);
   }
   darkMq.addEventListener('change', () => S && applyTheme());
 
@@ -80,6 +90,11 @@
     b.classList.toggle('sidebar-collapsed', side && !!L.verticalTabsCollapsed);
     b.classList.toggle('private', IS_PRIVATE);
     for (const c of ['fixed', 'fit', 'compact']) b.classList.toggle('tab-width-' + c, L.tabWidth === c);
+    const style = L.tabStyle || 'classic';
+    for (const c of ['classic', 'drift', 'lens', 'thread']) b.classList.toggle('ts-' + c, style === c || (style === 'combo' && (c === 'drift' || c === 'thread')));
+    b.classList.toggle('tab-tint', !!L.tabTint);
+    b.classList.toggle('tab-pulse', !!L.tabPulse);
+    if (style !== 'lens') clearLensStyles();
     for (const c of ['always', 'hover', 'active', 'never']) b.classList.toggle('close-' + c, L.tabCloseButton === c);
     document.documentElement.style.setProperty('--sidebar-w', Math.max(160, Math.min(480, L.verticalTabWidth || 240)) + 'px');
     $('#private-badge').hidden = !IS_PRIVATE;
@@ -325,42 +340,75 @@
   // ------------------------------------------------------------------ tabs
   const tabEls = new Map();
   const groupEls = new Map();
+  const stackEls = new Map();
+  let expandedStack = null;
   function tabsContainer() { return document.body.classList.contains('tabs-side') ? $('#vtabs') : $('#tabs'); }
+  const isVertical = () => document.body.classList.contains('tabs-side');
+  const tabStyle = () => (S && S.layout.tabStyle) || 'classic';
+  const hasStyle = (name) => { const s = tabStyle(); return s === name || (s === 'combo' && (name === 'drift' || name === 'thread')); };
+  const siteKey = (url) => (NimbusUrl.hostOf(url) || '').replace(/^www\./, '');
+  const validColor = (c) => typeof c === 'string' && /^(#[0-9a-f]{3,8}|rgba?\([\d\s.,%]+\)|hsla?\([\d\s.,%deg]+\))$/i.test(c.trim());
 
   function makeTabEl(tab) {
     const node = el('div', { class: 'tab', role: 'tab', draggable: 'true', 'data-id': tab.id });
-    node.append(el('span', { class: 'tab-icon' }), el('span', { class: 'tab-title' }));
-    const audio = el('button', { class: 'tab-audio', tabindex: '-1' }); audio.append(icon('volume'));
+    const text = el('span', { class: 'tab-text' }, el('span', { class: 'tab-title' }), el('span', { class: 'tab-sub' }));
+    node.append(el('span', { class: 'tab-icon' }), el('span', { class: 'tab-dot', 'aria-hidden': 'true' }), text);
+    const audio = el('button', { class: 'tab-audio', tabindex: '-1' }); audio.append(icon('volume'), el('span', { class: 'eq', 'aria-hidden': 'true' }, el('i'), el('i'), el('i')));
     const close = el('button', { class: 'tab-close', tabindex: '-1', title: t('tab.close') }); close.append(icon('close'));
-    node.append(audio, close);
+    node.append(audio, close, el('span', { class: 'tab-wave', 'aria-hidden': 'true' }));
     audio.addEventListener('click', (e) => { e.stopPropagation(); call('tabMute', tab.id); });
     close.addEventListener('click', (e) => { e.stopPropagation(); call('tabClose', Number(node.dataset.id)); });
     node.addEventListener('mousedown', (e) => {
+      hidePreview();
       if (e.button === 0 && !e.target.closest('button')) call('tabActivate', Number(node.dataset.id));
       if (e.button === 1) e.preventDefault();
     });
     node.addEventListener('auxclick', (e) => { if (e.button === 1 && S.tabs.middleClickClose) call('tabClose', Number(node.dataset.id)); });
     node.addEventListener('dblclick', (e) => e.stopPropagation());
-    node.addEventListener('contextmenu', (e) => { e.preventDefault(); call('tabMenu', Number(node.dataset.id), pointOf(e)); });
-    node.addEventListener('dragstart', onTabDragStart);
+    node.addEventListener('contextmenu', (e) => { e.preventDefault(); hidePreview(); call('tabMenu', Number(node.dataset.id), pointOf(e)); });
+    node.addEventListener('dragstart', (e) => { hidePreview(); onTabDragStart(e); });
     node.addEventListener('dragend', onTabDragEnd);
+    node.addEventListener('mouseenter', () => { schedulePreview(node, Number(node.dataset.id)); if (node.classList.contains('stack-member')) keepStackOpen(); });
+    node.addEventListener('mouseleave', () => { hidePreview(); if (node.classList.contains('stack-member')) closeStackSoon(); });
     return node;
   }
 
-  function updateTabEl(node, tab) {
+  /** Drift: how much attention a tab currently gets. */
+  function tierOf(tab, now) {
+    if (tab.id === state.activeId || (state.split && (state.split.a === tab.id || state.split.b === tab.id))) return 'active';
+    if (tab.pinned) return 'pinned';
+    if (tab.audible) return 'recent';
+    if (tab.sleeping) return 'drop';
+    const age = now - (tab.lastActive || now);
+    if (age < 10 * 60e3) return 'recent';
+    if (age < 45 * 60e3) return 'mid';
+    if (age < 3 * 3600e3) return 'old';
+    return 'drop';
+  }
+
+  function updateTabEl(node, tab, now) {
+    const pulse = S.layout.tabPulse;
     node.classList.toggle('active', tab.id === state.activeId);
     node.classList.toggle('pinned', !!tab.pinned);
     node.classList.toggle('sleeping', !!tab.sleeping);
     node.classList.toggle('audible', !!tab.audible);
     node.classList.toggle('muted', !!tab.muted);
+    node.classList.toggle('loading', !!tab.loading);
+    node.classList.toggle('attention', !!(pulse && tab.attention));
     node.classList.toggle('split-member', !!(state.split && (state.split.a === tab.id || state.split.b === tab.id)));
     node.setAttribute('aria-selected', tab.id === state.activeId ? 'true' : 'false');
+    node.dataset.tier = hasStyle('drift') ? tierOf(tab, now) : '';
     const title = tab.title || (isNewTab(tab.url) ? t('tab.newTab') : NimbusUrl.displayUrl(tab.url) || t('tab.untitled'));
     const tt = node.querySelector('.tab-title');
     if (tt.textContent !== title) tt.textContent = title;
-    node.title = title + (tab.sleeping ? ' — ' + t('tab.sleeping') : '') + (tab.url && !isNewTab(tab.url) ? '\n' + NimbusUrl.displayUrl(tab.url, { simplify: false }) : '');
+    node.querySelector('.tab-sub').textContent = isNewTab(tab.url) ? '' : siteKey(tab.url) || NimbusUrl.displayUrl(tab.url);
+    // with live previews the native tooltip would only get in the way
+    node.title = S.layout.tabPreview ? '' : title + (tab.sleeping ? ' — ' + t('tab.sleeping') : '') + (tab.url && !isNewTab(tab.url) ? '\n' + NimbusUrl.displayUrl(tab.url, { simplify: false }) : '');
+    node.setAttribute('aria-label', title);
     const iconBox = node.querySelector('.tab-icon');
-    const key = tab.loading ? 'loading' : tab.crashed ? 'crash' : tab.favicon ? 'fav:' + tab.favicon : isNewTab(tab.url) ? 'nimbus' : (tab.url || '').startsWith('nimbus://') ? 'nimbus' : 'globe';
+    // activity pulse keeps the favicon while loading and shows a wave instead of a spinner
+    const loadingIcon = tab.loading && !(pulse && tab.favicon);
+    const key = loadingIcon ? 'loading' : tab.crashed ? 'crash' : tab.favicon ? 'fav:' + tab.favicon : isNewTab(tab.url) ? 'nimbus' : (tab.url || '').startsWith('nimbus://') ? 'nimbus' : 'globe';
     if (iconBox.dataset.key !== key) {
       iconBox.dataset.key = key;
       iconBox.textContent = '';
@@ -374,6 +422,9 @@
     }
     setIcon(node.querySelector('.tab-audio'), tab.muted ? 'mute' : 'volume');
     node.querySelector('.tab-audio').title = t(tab.muted ? 'tab.unmute' : 'tab.mute');
+    const tinted = S.layout.tabTint && validColor(tab.tint);
+    node.classList.toggle('tinted', !!tinted);
+    if (tinted) node.style.setProperty('--tint', tab.tint); else node.style.removeProperty('--tint');
     const g = tab.groupId && state.groups.find((x) => x.id === tab.groupId);
     if (g) { node.dataset.group = g.id; node.dataset.color = g.color; } else { delete node.dataset.group; delete node.dataset.color; }
     node.classList.toggle('group-hidden', !!(g && g.collapsed && tab.id !== state.activeId));
@@ -388,14 +439,93 @@
     return node;
   }
 
+  // ---- stacks: 3+ background tabs of the same site collapse into one
+  function computeStacks() {
+    const stacks = new Map();
+    if (!S.layout.tabStacks) return stacks;
+    const by = new Map();
+    for (const tab of state.tabs) {
+      if (tab.id === state.activeId || tab.pinned || tab.groupId || !/^https?:/.test(tab.url || '')) continue;
+      if (state.split && (state.split.a === tab.id || state.split.b === tab.id)) continue;
+      const k = siteKey(tab.url);
+      if (!k) continue;
+      if (!by.has(k)) by.set(k, []);
+      by.get(k).push(tab);
+    }
+    for (const [k, list] of by) if (list.length >= 3) stacks.set(k, list);
+    return stacks;
+  }
+  function makeStackEl(key) {
+    const node = el('div', { class: 'tab stack', role: 'button', tabindex: '0', 'data-stack': key });
+    node.append(el('span', { class: 'stack-icons' }), el('span', { class: 'tab-text' }, el('span', { class: 'tab-title' }), el('span', { class: 'tab-sub' })), el('span', { class: 'stack-count' }));
+    const open = () => { expandedStack = node.dataset.stack; renderTabs(); };
+    node.addEventListener('click', () => {
+      // click activates the most recently used tab of the site
+      const members = (lastStacks.get(node.dataset.stack) || []).slice().sort((a, b) => (b.lastActive || 0) - (a.lastActive || 0));
+      if (members[0]) call('tabActivate', members[0].id);
+    });
+    node.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } });
+    node.addEventListener('mouseenter', () => { keepStackOpen(); clearTimeout(stackTimer); stackTimer = setTimeout(open, 260); });
+    node.addEventListener('mouseleave', () => { clearTimeout(stackTimer); closeStackSoon(); });
+    return node;
+  }
+  let stackTimer = null, stackCloseTimer = null, lastStacks = new Map();
+  function keepStackOpen() { clearTimeout(stackCloseTimer); }
+  function closeStackSoon() {
+    clearTimeout(stackCloseTimer);
+    stackCloseTimer = setTimeout(() => { if (expandedStack) { expandedStack = null; renderTabs(); } }, 480);
+  }
+  function updateStackEl(node, key, members) {
+    const recent = members.slice().sort((a, b) => (b.lastActive || 0) - (a.lastActive || 0));
+    const icons = node.querySelector('.stack-icons');
+    const favs = recent.map((m) => m.favicon).filter(Boolean).slice(0, 3);
+    const sig = favs.join('|');
+    if (icons.dataset.sig !== sig || !icons.childElementCount) {
+      icons.dataset.sig = sig;
+      icons.textContent = '';
+      const layers = favs.length ? favs : [''];
+      layers.slice().reverse().forEach((f) => {
+        const layer = el('span', { class: 'stack-layer' });
+        if (f) { const img = el('img', { src: f, alt: '', draggable: 'false' }); img.onerror = () => img.replaceWith(icon('globe')); layer.append(img); } else layer.append(icon('globe'));
+        icons.append(layer);
+      });
+    }
+    node.querySelector('.tab-title').textContent = key;
+    node.querySelector('.tab-sub').textContent = t('stack.tabs', { count: members.length });
+    node.querySelector('.stack-count').textContent = String(members.length);
+    node.setAttribute('aria-label', t('stack.label', { count: members.length, host: key }));
+    node.classList.toggle('open', expandedStack === key);
+    node.classList.toggle('attention', S.layout.tabPulse && members.some((m) => m.attention));
+    node.classList.toggle('audible', members.some((m) => m.audible && !m.muted));
+    const tint = members.map((m) => m.tint).find(validColor);
+    const tinted = S.layout.tabTint && tint;
+    node.classList.toggle('tinted', !!tinted);
+    if (tinted) node.style.setProperty('--tint', tint); else node.style.removeProperty('--tint');
+    node.dataset.tier = hasStyle('drift') ? (members.every((m) => tierOf(m, Date.now()) === 'drop') ? 'drop' : 'old') : '';
+  }
+
   function renderTabs() {
     if (!S) return;
+    const now = Date.now();
     const container = tabsContainer();
     const other = container.id === 'tabs' ? $('#vtabs') : $('#tabs');
     // move existing elements if layout switched
-    for (const n of [...other.children]) container.append(n);
+    for (const n of [...other.children]) if (!n.classList.contains('drop-indicator')) container.append(n);
+    const stacks = computeStacks();
+    lastStacks = stacks;
+    if (expandedStack && !stacks.has(expandedStack)) expandedStack = null;
+    const stackOf = new Map();
+    for (const [k, list] of stacks) for (const m of list) stackOf.set(m.id, k);
+    const emittedStacks = new Set();
     const wanted = [];
     const seenGroups = new Set();
+    const emitTab = (tab, extraClass) => {
+      let node = tabEls.get(tab.id);
+      if (!node) { node = makeTabEl(tab); tabEls.set(tab.id, node); }
+      updateTabEl(node, tab, now);
+      node.classList.toggle('stack-member', extraClass === 'stack-member');
+      wanted.push(node);
+    };
     for (const tab of state.tabs) {
       if (tab.groupId && !seenGroups.has(tab.groupId)) {
         seenGroups.add(tab.groupId);
@@ -412,31 +542,219 @@
           wanted.push(gn);
         }
       }
-      let node = tabEls.get(tab.id);
-      if (!node) { node = makeTabEl(tab); tabEls.set(tab.id, node); }
-      updateTabEl(node, tab);
-      wanted.push(node);
+      const sk = stackOf.get(tab.id);
+      if (sk) {
+        if (emittedStacks.has(sk)) continue;
+        emittedStacks.add(sk);
+        let sn = stackEls.get(sk);
+        if (!sn) { sn = makeStackEl(sk); stackEls.set(sk, sn); }
+        updateStackEl(sn, sk, stacks.get(sk));
+        wanted.push(sn);
+        if (expandedStack === sk) for (const m of stacks.get(sk)) emitTab(m, 'stack-member');
+        continue;
+      }
+      emitTab(tab);
     }
-    for (const [id, node] of tabEls) if (!state.tabs.some((x) => x.id === id)) { node.remove(); tabEls.delete(id); }
+    const shown = new Set(wanted);
+    for (const [id, node] of tabEls) {
+      if (!state.tabs.some((x) => x.id === id)) { node.remove(); tabEls.delete(id); }
+      else if (!shown.has(node)) node.remove();
+    }
     for (const [id, node] of groupEls) if (!seenGroups.has(id)) { node.remove(); groupEls.delete(id); }
+    for (const [k, node] of stackEls) if (!emittedStacks.has(k)) { node.remove(); stackEls.delete(k); }
     // reorder only when needed
     const current = [...container.children].filter((n) => !n.classList.contains('drop-indicator'));
     const same = current.length === wanted.length && current.every((n, i) => n === wanted[i]);
     if (!same) for (const n of wanted) container.append(n);
+    applyThreadClasses();
     fitTabs();
+    if (hasStyle('lens')) resetLens();
+    scheduleThreads();
     const act = tabEls.get(state.activeId);
-    if (act && !dragState) act.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    if (act && !dragState && !lensActive) act.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   }
+  // drift ages tabs over time – re-evaluate regularly
+  setInterval(() => { if (S && hasStyle('drift')) renderTabs(); }, 30000);
 
   function fitTabs() {
-    if (document.body.classList.contains('tabs-side')) { for (const n of tabEls.values()) n.classList.remove('narrow'); return; }
+    const classicNarrowing = !isVertical() && (tabStyle() === 'classic' || tabStyle() === 'thread');
+    if (!classicNarrowing) { for (const n of tabEls.values()) n.classList.remove('narrow'); }
     const container = $('#tabs');
     const avail = $('#tabstrip').clientWidth - 120;
-    const count = state.tabs.filter((x) => !x.pinned).length || 1;
-    const per = avail / count;
-    for (const n of tabEls.values()) n.classList.toggle('narrow', per < 64 && !n.classList.contains('pinned'));
+    if (classicNarrowing) {
+      const count = state.tabs.filter((x) => !x.pinned).length || 1;
+      const per = avail / count;
+      for (const n of tabEls.values()) n.classList.toggle('narrow', per < 64 && !n.classList.contains('pinned'));
+    }
     container.style.maxWidth = Math.max(100, avail + 40) + 'px';
   }
+
+  // ---- threads: show which tab was opened from which
+  function threadDepth(tab, byId) {
+    let d = 0;
+    for (let p = tab; p && p.openerId && byId.has(p.openerId) && d < 4; p = byId.get(p.openerId)) d++;
+    return d;
+  }
+  function applyThreadClasses() {
+    const on = hasStyle('thread');
+    const byId = new Map(state.tabs.map((x) => [x.id, x]));
+    for (const tab of state.tabs) {
+      const node = tabEls.get(tab.id);
+      if (!node) continue;
+      const parentShown = on && tab.openerId && tabEls.get(tab.openerId) && tabEls.get(tab.openerId).isConnected;
+      node.classList.toggle('child', !!parentShown);
+      node.style.setProperty('--depth', parentShown ? String(threadDepth(tab, byId)) : '0');
+    }
+  }
+  let threadFrames = 0;
+  function scheduleThreads() {
+    if (!hasStyle('thread') || isVertical()) { const svg = $('#threads'); if (svg) svg.textContent = ''; return; }
+    const running = threadFrames > 0;
+    threadFrames = 24; // keep redrawing while widths animate
+    if (running) return;
+    const loop = () => { drawThreads(); if (--threadFrames > 0) requestAnimationFrame(loop); };
+    requestAnimationFrame(loop);
+  }
+  function drawThreads() {
+    let svg = $('#threads');
+    const strip = $('#tabstrip');
+    if (!svg) {
+      svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.id = 'threads';
+      svg.setAttribute('aria-hidden', 'true');
+      strip.append(svg);
+    }
+    const sr = strip.getBoundingClientRect();
+    const tabsBox = $('#tabs').getBoundingClientRect();
+    const parts = [];
+    for (const tab of state.tabs) {
+      if (!tab.openerId) continue;
+      const c = tabEls.get(tab.id), p = tabEls.get(tab.openerId);
+      if (!c || !p || !c.isConnected || !p.isConnected || c.classList.contains('group-hidden') || p.classList.contains('group-hidden')) continue;
+      const cr = c.getBoundingClientRect(), pr = p.getBoundingClientRect();
+      const clip = (x) => x >= tabsBox.left - 2 && x <= tabsBox.right + 2;
+      const px = pr.left + Math.min(pr.width / 2, 26) - sr.left + (pr.width > 60 ? 6 : 0);
+      const cx = cr.left + Math.min(cr.width / 2, 22) - sr.left;
+      if (!clip(px + sr.left) && !clip(cx + sr.left)) continue;
+      const py = pr.top - sr.top + 1, cy = cr.top - sr.top + 1;
+      const lift = Math.max(4, Math.min(py, cy) - 3);
+      const peak = Math.min(py, cy) - lift;
+      const color = p.classList.contains('tinted') ? getComputedStyle(p).getPropertyValue('--tint').trim() : 'var(--n-accent)';
+      parts.push(`<path d="M${px.toFixed(1)} ${py.toFixed(1)} C ${px.toFixed(1)} ${peak.toFixed(1)}, ${cx.toFixed(1)} ${peak.toFixed(1)}, ${cx.toFixed(1)} ${cy.toFixed(1)}" style="stroke:${color}"/><circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="2" style="fill:${color}"/>`);
+    }
+    svg.innerHTML = parts.join('');
+  }
+  $('#tabs').addEventListener('scroll', () => scheduleThreads(), { passive: true });
+
+  // ---- lens: tabs near the pointer grow, the rest stay small
+  let lensActive = false;
+  const LENS = { minW: 40, maxW: 220, minH: 26, maxH: 50 };
+  function lensItems() { return [...tabsContainer().children].filter((n) => (n.classList.contains('tab') && !n.classList.contains('group-hidden') && !n.classList.contains('pinned'))); }
+  function lensNeeded(items) {
+    if (isVertical()) return true;
+    const avail = $('#tabstrip').clientWidth - 140;
+    return items.length * 150 > avail;
+  }
+  function resetLens() {
+    lensActive = false;
+    const items = lensItems();
+    const vertical = isVertical();
+    const needed = lensNeeded(items);
+    for (const n of items) {
+      n.classList.remove('magnified');
+      if (vertical) { n.style.height = (n.classList.contains('active') ? LENS.maxH - 10 : LENS.minH + 4) + 'px'; n.classList.toggle('lens-small', false); continue; }
+      const w = !needed ? 150 : n.classList.contains('active') ? 190 : LENS.minW;
+      n.style.width = w + 'px';
+      n.classList.toggle('lens-small', w < 76);
+    }
+  }
+  function applyLens(e) {
+    const items = lensItems();
+    if (!items.length || !lensNeeded(items)) return;
+    const vertical = isVertical();
+    const hovered = items.find((n) => { const r = n.getBoundingClientRect(); return vertical ? e.clientY >= r.top && e.clientY < r.bottom : e.clientX >= r.left && e.clientX < r.right; });
+    if (!hovered) return;
+    lensActive = true;
+    const r = hovered.getBoundingClientRect();
+    const frac = vertical ? (e.clientY - r.top) / r.height : (e.clientX - r.left) / r.width;
+    const h = items.indexOf(hovered) + Math.max(0, Math.min(1, frac)) - 0.5;
+    items.forEach((n, i) => {
+      const k = Math.exp(-Math.pow((i - h) / 1.35, 2));
+      if (vertical) {
+        const size = LENS.minH + (LENS.maxH - LENS.minH) * k;
+        n.style.height = size.toFixed(1) + 'px';
+        n.classList.toggle('magnified', size > 40);
+      } else {
+        const base = n.classList.contains('active') ? 120 : LENS.minW;
+        const w = base + (LENS.maxW - base) * k;
+        n.style.width = w.toFixed(1) + 'px';
+        n.classList.toggle('lens-small', w < 76);
+      }
+    });
+  }
+  for (const c of [$('#tabs'), $('#vtabs')]) {
+    c.addEventListener('mousemove', (e) => { if (hasStyle('lens') && !dragState) requestAnimationFrame(() => applyLens(e)); });
+    c.addEventListener('mouseleave', () => { if (hasStyle('lens')) setTimeout(() => { if (!c.matches(':hover')) resetLens(); }, 120); });
+  }
+  function clearLensStyles() { for (const n of [...tabEls.values(), ...stackEls.values()]) { n.style.width = ''; n.style.height = ''; n.classList.remove('lens-small', 'magnified'); } }
+
+  // ---- live preview card
+  const previewEl = el('div', { class: 'tab-preview', role: 'tooltip', hidden: true });
+  document.body.append(previewEl);
+  let previewTimer = null, previewFor = null, previewShown = false;
+  const thumbCache = new Map();
+  function schedulePreview(node, tabId) {
+    if (!S.layout.tabPreview || dragState || popover) return;
+    clearTimeout(previewTimer);
+    previewTimer = setTimeout(() => showPreview(node, tabId), previewShown ? 60 : 480);
+  }
+  async function showPreview(node, tabId) {
+    const tab = state.tabs.find((x) => x.id === tabId);
+    if (!tab || !node.isConnected || popover || !node.matches(':hover')) return;
+    previewFor = tabId;
+    previewEl.textContent = '';
+    const active = tab.id === state.activeId;
+    previewEl.append(el('div', { class: 'pv-text' },
+      el('div', { class: 'pv-title', text: tab.title || (isNewTab(tab.url) ? t('tab.newTab') : t('tab.untitled')) }),
+      el('div', { class: 'pv-host', text: isNewTab(tab.url) ? 'Nimbus' : NimbusUrl.displayUrl(tab.url) }),
+      tab.sleeping ? el('div', { class: 'pv-note', text: t('preview.sleeping') }) : null,
+      tab.audible ? el('div', { class: 'pv-note', text: t(tab.muted ? 'preview.muted' : 'preview.playing') }) : null));
+    let img = null;
+    if (!active && !isNewTab(tab.url)) {
+      img = el('img', { class: 'pv-img', alt: '' });
+      const cached = thumbCache.get(tabId);
+      if (cached) img.src = cached;
+      previewEl.append(img);
+    }
+    const r = node.getBoundingClientRect();
+    previewEl.hidden = false;
+    previewEl.classList.toggle('instant', previewShown);
+    const w = 268;
+    if (isVertical()) {
+      const right = S.layout.tabPosition === 'right';
+      previewEl.style.left = (right ? r.left - w - 10 : r.right + 10) + 'px';
+      previewEl.style.top = Math.max(6, Math.min(r.top - 6, innerHeight - 260)) + 'px';
+    } else {
+      previewEl.style.left = Math.max(6, Math.min(r.left, innerWidth - w - 6)) + 'px';
+      previewEl.style.top = (r.bottom + 6) + 'px';
+    }
+    if (!previewShown) { previewShown = true; overlayUse('preview', true); }
+    if (img) {
+      const data = await call('tabPreview', tabId).catch(() => null);
+      if (previewFor !== tabId) return;
+      if (data) { thumbCache.set(tabId, data); img.src = data; } else img.remove();
+    }
+  }
+  function hidePreview() {
+    clearTimeout(previewTimer);
+    previewFor = null;
+    if (!previewShown) return;
+    previewShown = false;
+    previewEl.hidden = true;
+    overlayUse('preview', false);
+  }
+  addEventListener('blur', hidePreview);
+  addEventListener('wheel', hidePreview, { passive: true });
 
   $('#newtab-btn').addEventListener('click', () => call('command', 'newTab'));
   $('#vnewtab-btn').addEventListener('click', () => call('command', 'newTab'));
@@ -498,7 +816,7 @@
   }
   function dropIndex(container, e) {
     const vertical = container.classList.contains('vertical');
-    const items = [...container.querySelectorAll('.tab:not(.group-hidden)')];
+    const items = [...container.querySelectorAll('.tab[data-id]:not(.group-hidden)')];
     let index = state.tabs.length;
     let ref = null;
     for (const n of items) {
@@ -641,14 +959,14 @@
   (() => {
     const d = $('#split-divider');
     let dragging = false;
-    d.addEventListener('pointerdown', (e) => { if (e.target.closest('button')) return; dragging = true; d.classList.add('dragging'); d.setPointerCapture(e.pointerId); call('setOverlay', true); });
+    d.addEventListener('pointerdown', (e) => { if (e.target.closest('button')) return; dragging = true; d.classList.add('dragging'); d.setPointerCapture(e.pointerId); overlayUse('split', true); });
     d.addEventListener('pointermove', (e) => {
       if (!dragging) return;
       const vp = $('#viewport').getBoundingClientRect();
       state.split.ratio = Math.max(0.15, Math.min(0.85, (e.clientX - vp.left) / vp.width));
       queueRects();
     });
-    d.addEventListener('pointerup', () => { if (!dragging) return; dragging = false; d.classList.remove('dragging'); call('splitRatio', state.split.ratio); if (!popover) call('setOverlay', false); });
+    d.addEventListener('pointerup', () => { if (!dragging) return; dragging = false; d.classList.remove('dragging'); call('splitRatio', state.split.ratio); overlayUse('split', false); });
     $('#split-swap').addEventListener('click', () => call('splitSwap'));
     $('#split-close').addEventListener('click', () => call('splitClose'));
   })();
@@ -662,6 +980,7 @@
     overlay.hidden = false;
     backdrop.classList.toggle('dim', !!opts.dim);
     overlay.append(node);
+    hidePreview();
     popover = { kind, node, onClose: opts.onClose, modal: !!opts.modal };
     if (opts.width) node.style.width = opts.width + 'px';
     if (opts.x !== undefined) {
@@ -670,7 +989,7 @@
       node.style.left = Math.max(8, Math.min(x, innerWidth - w - 8)) + 'px';
       node.style.top = Math.max(8, opts.y) + 'px';
     }
-    call('setOverlay', true);
+    overlayUse('popover', true);
     if (!opts.keepFocus) {
       const f = node.querySelector('[autofocus], input:not([type=checkbox]), select, button.primary, button');
       if (f) setTimeout(() => f.focus(), 0);
@@ -686,7 +1005,7 @@
     if (!replacing) {
       overlay.hidden = true;
       backdrop.classList.remove('dim');
-      call('setOverlay', false);
+      overlayUse('popover', false);
       if (p.kind === 'suggest') { sugItems = []; sugIndex = -1; }
       nextPrompt();
     }
@@ -962,6 +1281,7 @@
         const prevActive = state.activeId;
         const prevSplit = JSON.stringify(state.split);
         state = payload;
+        if (previewFor && !state.tabs.some((x) => x.id === previewFor)) hidePreview();
         renderTabs();
         updateToolbar();
         renderBookmarksBar();

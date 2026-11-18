@@ -403,7 +403,7 @@ class Browser {
         if (visible.has(t) || t.state.sleeping || t.state.audible || t.lastActive > limit) continue;
         const url = t.state.url || '';
         if (url.startsWith('nimbus://')) continue;
-        t.sleep();
+        t.sleepWithPreview();
       }
     }
   }

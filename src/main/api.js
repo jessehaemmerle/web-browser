@@ -76,6 +76,7 @@ function setupIpc(browser) {
     tabClose: (ctx, id) => ctx.win.closeTab(ctx.win.tabById(id)),
     tabMove: (ctx, id, index, groupId) => ctx.win.moveTab(id, index, groupId),
     tabMenu: (ctx, id, point) => { const tab = ctx.win.tabById(id); if (tab) b.contextMenu.showTab(ctx.win, tab, point); },
+    tabPreview: async (ctx, id) => { const tab = ctx.win.tabById(id); return tab ? tab.thumbnail() : null; },
     tabMute: (ctx, id) => { const tab = ctx.win.tabById(id); if (tab) tab.setMuted(!tab.state.muted); },
     tabDetach: (ctx, id, point) => { const tab = ctx.win.tabById(id); if (tab) ctx.win.moveTabToNewWindow(tab, point); },
     tabToWindow: (ctx, id, targetWindowId, index) => {

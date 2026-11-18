@@ -259,6 +259,7 @@ class ContextMenu {
         submenu: [
           item(t('menu.splitView'), 'toggleSplit', { type: 'checkbox', checked: !!win.split }),
           item(t('menu.verticalTabs'), 'toggleTabLayout', { type: 'checkbox', checked: b.settings.get('layout.tabPosition') !== 'top' }),
+          { label: t('menu.tabStyle'), submenu: ['classic', 'drift', 'lens', 'thread', 'combo'].map((st) => ({ label: t('tabstyle.' + st), type: 'radio', checked: (b.settings.get('layout.tabStyle') || 'classic') === st, click: () => b.settings.set('layout.tabStyle', st) })) },
           item(t('menu.focusMode'), 'focusMode'),
           { type: 'separator' },
           { label: t('menu.theme'), submenu: ['system', 'light', 'dark'].map((m) => ({ label: t('theme.' + m), type: 'radio', checked: b.settings.get('appearance.mode') === m, click: () => b.settings.set('appearance.mode', m) })) },

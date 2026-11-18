@@ -279,6 +279,8 @@ class NimbusWindow {
     const prev = this.activeTab;
     this.activeTab = tab;
     tab.lastActive = Date.now();
+    tab.state.attention = false;
+    if (prev && prev !== tab) prev.lastActive = Date.now();
     if (tab.state.sleeping) tab.wake();
     if (prev && prev !== tab && prev.wc) prev.wc.stopFindInPage('clearSelection');
     this.layoutTabs();

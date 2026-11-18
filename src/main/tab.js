@@ -32,8 +32,12 @@ class Tab {
       sleeping: false,
       crashed: false,
       displayUrl: null,     // shown instead of the real URL (error pages)
-      secure: null
+      secure: null,
+      themeColor: null,     // <meta name="theme-color">
+      faviconColor: null,   // dominant colour of the favicon
+      attention: false      // background tab changed (e.g. new messages in the title)
     };
+    this.thumb = null;      // { data, time } cached preview image
     this.savedHistory = opts.history || null; // { entries, index }
     if (opts.sleeping) {
       this.state.sleeping = true;
@@ -102,18 +106,24 @@ class Tab {
     wc.on('did-start-loading', () => { this.state.loading = true; this.state.crashed = false; this.changed(); });
     wc.on('did-stop-loading', () => { this.state.loading = false; this.updateNav(); this.changed(); });
     wc.on('page-title-updated', (_e, title) => {
+      if (!this.isActive() && !this.state.loading && this.state.title && title !== this.state.title && !this.win.visibleTabs().includes(this)) this.state.attention = true;
       this.state.title = title;
       if (!this.win.private) b.history.updateTitle(wc.getURL(), title);
       this.changed();
     });
-    wc.on('page-favicon-updated', (_e, favicons) => { this.state.favicon = favicons && favicons[0] || ''; this.changed(); });
+    wc.on('page-favicon-updated', (_e, favicons) => {
+      this.state.favicon = favicons && favicons[0] || '';
+      this.changed();
+      this.computeFaviconColor(this.state.favicon);
+    });
+    wc.on('did-change-theme-color', (_e, color) => { this.state.themeColor = color || null; this.changed(); });
     wc.on('did-navigate', (_e, url, code) => {
       const prevHost = hostOf(this.state.url);
       this.state.url = url;
       if (!url.startsWith('nimbus://error')) this.state.displayUrl = null;
       this.state.blocked = 0;
       this.state.secure = url.startsWith('https:') ? true : url.startsWith('http:') ? false : null;
-      if (hostOf(url) !== prevHost) this.state.favicon = '';
+      if (hostOf(url) !== prevHost) { this.state.favicon = ''; this.state.faviconColor = null; this.state.themeColor = null; }
       this.applyZoom();
       this.recordVisit(url, code);
       this.updateNav();
@@ -127,7 +137,7 @@ class Tab {
       this.updateNav();
       this.changed();
     });
-    wc.on('dom-ready', () => b.siteScripts.onDomReady(this));
+    wc.on('dom-ready', () => { b.siteScripts.onDomReady(this); this.readThemeColor(); });
     wc.on('did-fail-load', (_e, code, desc, url, isMainFrame) => {
       if (!isMainFrame || code === -3 /* ABORTED */ || code === 0) return;
       this.showError(url, code, desc);
@@ -165,6 +175,57 @@ class Tab {
       b.openExternalWithPermission(this, url);
     });
     wc.on('devtools-open-url', (_e, url) => this.win.createTab({ url, active: true, opener: this }));
+  }
+
+  /** <meta name="theme-color"> of the page, read in an isolated world. */
+  readThemeColor() {
+    const wc = this.wc;
+    if (!wc || !/^https?:|^file:/.test(wc.getURL())) return;
+    const code = `(() => { const m = [...document.querySelectorAll('meta[name="theme-color"]')].find((x) => !x.media || matchMedia(x.media).matches); return m ? m.content.trim() : null; })()`;
+    wc.executeJavaScriptInIsolatedWorld(1001, [{ code }]).then((c) => {
+      const color = typeof c === 'string' && c.length < 40 ? c : null;
+      if (color !== this.state.themeColor) { this.state.themeColor = color; this.changed(); }
+    }).catch(() => {});
+  }
+
+  /** Average colour of the favicon's saturated pixels → used to tint the tab. */
+  async computeFaviconColor(url) {
+    if (!url || this.faviconColorFor === url) return;
+    this.faviconColorFor = url;
+    try {
+      const { nativeImage } = require('electron');
+      let img;
+      if (url.startsWith('data:')) img = nativeImage.createFromDataURL(url);
+      else {
+        const res = await this.win.session.fetch(url, { cache: 'force-cache' });
+        if (!res.ok) return;
+        img = nativeImage.createFromBuffer(Buffer.from(await res.arrayBuffer()));
+      }
+      if (img.isEmpty() || this.state.favicon !== url) return;
+      const bmp = img.resize({ width: 16, height: 16, quality: 'good' }).toBitmap(); // BGRA
+      let r = 0, g = 0, b = 0, n = 0;
+      for (let i = 0; i < bmp.length; i += 4) {
+        const B = bmp[i], G = bmp[i + 1], R = bmp[i + 2], A = bmp[i + 3];
+        if (A < 128) continue;
+        const max = Math.max(R, G, B), min = Math.min(R, G, B);
+        if (max - min < 40 || max < 40) continue; // skip grey / black / white
+        r += R; g += G; b += B; n++;
+      }
+      this.state.faviconColor = n >= 4 ? '#' + [r, g, b].map((v) => Math.round(v / n).toString(16).padStart(2, '0')).join('') : null;
+      this.changed();
+    } catch (_) { /* favicon not reachable */ }
+  }
+
+  /** Small preview image of the page (works for background tabs too). */
+  async thumbnail() {
+    const wc = this.wc;
+    if (wc && !wc.isDestroyed() && !(this.thumb && Date.now() - this.thumb.time < 4000)) {
+      try {
+        const img = await wc.capturePage(undefined, { stayHidden: true });
+        if (!img.isEmpty()) this.thumb = { data: img.resize({ width: 320, quality: 'good' }).toDataURL(), time: Date.now() };
+      } catch (_) { /* keep old preview */ }
+    }
+    return this.thumb ? this.thumb.data : null;
   }
 
   recordVisit(url, code) {
@@ -222,6 +283,11 @@ class Tab {
   isActive() { return this.win.activeTab === this; }
 
   /** Put tab to sleep to free memory. */
+  async sleepWithPreview() {
+    await this.thumbnail().catch(() => {});
+    return this.sleep();
+  }
+
   sleep() {
     const wc = this.wc;
     if (!wc || this.state.audible || this.state.sleeping) return false;
@@ -282,6 +348,8 @@ class Tab {
       audible: s.audible, muted: s.muted, pinned: s.pinned, groupId: s.groupId, canGoBack: s.canGoBack,
       canGoForward: s.canGoForward, zoom: s.zoom, blocked: s.blocked, sleeping: s.sleeping, crashed: s.crashed,
       secure: s.secure, bookmarked: this.browser.bookmarks.isBookmarked(s.url),
+      lastActive: this.lastActive, openerId: this.openerId && this.win.tabById(this.openerId) ? this.openerId : null,
+      tint: s.themeColor || s.faviconColor || null, attention: s.attention,
       protection: this.browser.isProtectionEnabledFor(s.url)
     };
   }

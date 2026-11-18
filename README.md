@@ -39,6 +39,22 @@ Unter Linux funktioniert Nimbus mit X11 und Wayland (automatische Erkennung).
 - Sitzungswiederherstellung nach Neustart; inaktive Tabs **schlafen automatisch** und sparen so Arbeitsspeicher
 - Fokus-Modus (Oberfläche ausblenden), Vollbild, Bild-im-Bild, Seite als HTML/MHTML/PDF speichern, Übersetzen, Task-Manager
 
+**Tabs, neu gedacht** – fünf Tab-Stile, frei wählbar unter Einstellungen › Layout oder Menü › Ansicht › Tab-Stil:
+
+| Stil | Idee |
+|---|---|
+| **Drift** (Standard) | Tabs „altern“ sichtbar: der aktive Tab ist breit, kürzlich genutzte normal, lange unberührte schrumpfen bis zum runden Favicon-Tropfen. Schlafende Tabs verblassen. So sortiert sich die Leiste nach deiner Aufmerksamkeit – ohne die Reihenfolge zu ändern. |
+| **Lupe** | Alle Tabs schmal; unter dem Mauszeiger vergrößern sie sich wie eine Lupe und zeigen ihren Titel. |
+| **Faden** | Ein feiner Faden verbindet Tabs mit dem Tab, aus dem sie geöffnet wurden. Seitlich wird daraus ein eingerückter Baum. |
+| **Drift + Faden** | Beides zugleich. |
+| **Klassisch** | Gleich breite Tabs wie gewohnt. |
+
+Dazu vier einzeln abschaltbare Extras: **Live-Vorschau** (Bild der Seite beim Überfahren, auch für Hintergrund-Tabs), **Seitenfarbe im Tab** (der aktive Tab übernimmt die Farbe der Website), **Aktivitätspuls** (Ladewelle, Tonwelle statt Lautsprecher, Punkt bei Neuigkeiten wie „(3) Postfach“) und **Stapel pro Website** (ab drei Hintergrund-Tabs einer Website als Kartenstapel, der sich beim Überfahren auffächert). Alles funktioniert oben und in der Seitenleiste.
+
+| Tab-Stile in den Einstellungen | Stapel fächert sich auf | Live-Vorschau | Drift + Faden seitlich |
+|---|---|---|---|
+| ![](docs/screenshots/tab-stile.png) | ![](docs/screenshots/tab-stapel.png) | ![](docs/screenshots/tab-vorschau.png) | ![](docs/screenshots/tab-baum-seitlich.png) |
+
 **Datenschutz & Sicherheit**
 - Eingebauter **Werbe- und Trackerblocker** (EasyList/EasyPrivacy-basierte Listen, wöchentliche Aktualisierung, eigene Regeln, abschaltbar pro Website über das Schild-Symbol)
 - Drittanbieter-Cookies blockiert, *Do Not Track* und *Global Privacy Control*
@@ -60,7 +76,7 @@ Alle Optionen findest du unter **Menü ☰ › Einstellungen** (`Strg+,`) — mi
 | Bereich | Was du einstellen kannst |
 |---|---|
 | Aussehen | Hell/Dunkel/System, 6 Themes (u. a. Hoher Kontrast), Akzentfarbe, einzelne Farben, Schriftart und -größe, Dichte, Eckenradius, Animationen, Dunkelmodus für alle Seiten, **eigenes CSS für die Oberfläche** |
-| Layout | Tab-Position, kompakter Modus, Tab-Breite, Schließen-Knopf, wo neue Tabs erscheinen, **Knöpfe der Symbolleiste ein-/ausblenden und umsortieren**, Lesezeichenleiste, vereinfachte Adressen, integrierte oder System-Titelleiste |
+| Layout | **Tab-Stil** (Drift, Lupe, Faden, Kombination, Klassisch) samt Vorschau, Seitenfarbe, Aktivitätspuls und Stapeln, Tab-Position, kompakter Modus, Tab-Breite, Schließen-Knopf, wo neue Tabs erscheinen, **Knöpfe der Symbolleiste ein-/ausblenden und umsortieren**, Lesezeichenleiste, vereinfachte Adressen, integrierte oder System-Titelleiste |
 | Neuer Tab | Hintergrund (Tageszeit-Himmel, Farbe, Verlauf, eigenes Bild, Abdunkeln), Uhr (12/24 h, Sekunden), Datum, Begrüßung mit Name, Suchfeld, Schnellwahl-Kacheln und Spalten, oder eine beliebige eigene Seite |
 | Suche | Standard-Suchmaschine (DuckDuckGo voreingestellt), eigene Suchmaschinen mit Kürzeln, Vorschläge |
 | Start & Tabs | Sitzung wiederherstellen / Startseite / bestimmte Seiten, Schlafmodus-Zeit, Mittelklick, Doppelklick, Mausrad-Tabwechsel |
@@ -123,7 +139,7 @@ npm start
 |---|---|
 | `npm start` | Nimbus aus dem Quellcode starten |
 | `npm test` | Unit-Tests (URL-Erkennung, Kürzel, Themes inkl. WCAG-Kontrast, Lesezeichen-Import/-Export, Einstellungen, Verlauf, CRX) |
-| `npm run test:e2e` | Startet die echte App und prüft 33 Abläufe (Tabs, Navigation, Popups, Kürzel, Suche, Lesezeichen, Downloads, Werbeblocker, Erweiterung, Berechtigungen, geteilte Ansicht, Gruppen, Schlafmodus, Themes, Einstellungen, Fehlerseite, privates Fenster, Sitzungswiederherstellung). Unter Linux ohne Bildschirm: `xvfb-run -a npm run test:e2e` |
+| `npm run test:e2e` | Startet die echte App und prüft 43 Abläufe (Tabs, alle Tab-Stile und Extras, Navigation, Popups, Kürzel, Suche, Lesezeichen, Downloads, Werbeblocker, Erweiterung, Berechtigungen, geteilte Ansicht, Gruppen, Schlafmodus, Themes, Einstellungen, Fehlerseite, privates Fenster, Sitzungswiederherstellung). Unter Linux ohne Bildschirm: `xvfb-run -a npm run test:e2e` |
 | `npm run lint` | Syntaxprüfung aller Quelldateien |
 | `npm run dist:linux` / `npm run dist:win` | Installer bauen (Ausgabe in `dist/`) |
 

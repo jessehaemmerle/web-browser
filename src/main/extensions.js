@@ -34,7 +34,9 @@ class Extensions {
           const tab = win.createTab({ url: details.url || b.newTabUrl(), active: details.active !== false, atEnd: true });
           return [tab.wc, win.win];
         },
-        selectTab: (wc) => { const tab = b.tabsByWc.get(wc.id); if (tab) { tab.win.activate(tab); tab.win.focus(); } },
+        // only follow activation requests that come from extensions (chrome.tabs.update),
+        // not the library's own bookkeeping while we register or select tabs
+        selectTab: (wc) => { if (this.internal) return; const tab = b.tabsByWc.get(wc.id); if (tab && tab !== tab.win.activeTab) { tab.win.activate(tab); tab.win.focus(); } },
         removeTab: (wc) => { const tab = b.tabsByWc.get(wc.id); if (tab) tab.win.closeTab(tab); },
         createWindow: async (details) => {
           const urls = [].concat(details.url || []);
@@ -90,12 +92,16 @@ class Extensions {
 
   addTab(tab, win) {
     if (!this.api || !tab.wc) return;
-    try { this.api.addTab(tab.wc, win.win); } catch (err) { console.warn('[extensions] addTab', err.message); }
+    this.internal = true;
+    try { this.api.addTab(tab.wc, win.win); } catch (err) { console.warn('[extensions] addTab', err.message); } finally { this.internal = false; }
+    // keep the library's idea of the active tab in sync
+    if (win.activeTab && win.activeTab !== tab) this.selectTab(win.activeTab);
   }
 
   selectTab(tab) {
     if (!this.api || !tab || !tab.wc || tab.win.private) return;
-    try { this.api.selectTab(tab.wc); } catch (_) { /* tab not tracked */ }
+    this.internal = true;
+    try { this.api.selectTab(tab.wc); } catch (_) { /* tab not tracked */ } finally { this.internal = false; }
   }
 
   contextMenuItems(tab, params) {

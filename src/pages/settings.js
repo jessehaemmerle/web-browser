@@ -163,8 +163,35 @@
     };
     binders.push({ path: 'layout.toolbarButtons', update: renderTb });
     renderTb();
+    const STYLES = {
+      classic: [[1, 1, 1, 1, 1]],
+      drift: [[2.2, 1, .8, .3, .3, .3]],
+      lens: [[.3, .3, .7, 1.6, .7, .3, .3]],
+      thread: [[1, .9, .9, 1], 'thread'],
+      combo: [[2, .9, .9, .3, .3], 'thread']
+    };
+    const stylePicker = el('div', { class: 'presets tabstyles' });
+    const renderStyles = () => {
+      stylePicker.textContent = '';
+      for (const [id, [widths, extra]] of Object.entries(STYLES)) {
+        const on = (S.layout.tabStyle || 'classic') === id;
+        const pv = el('div', { class: 'ts-pv' + (extra ? ' with-thread' : '') });
+        widths.forEach((w, i) => pv.append(el('i', { class: (i === 0 ? 'act' : '') + (w < .5 ? ' drop' : '') + (extra && (i === 1 || i === 2) ? ' kid' : ''), style: `flex:${w}` })));
+        const b = el('button', { type: 'button', class: 'preset' + (on ? ' on' : ''), 'aria-pressed': on ? 'true' : 'false' }, pv,
+          el('div', { class: 'nm', text: t('tabstyle.' + id) }), el('div', { class: 'ds', text: t('tabstyle.' + id + '.desc') }));
+        b.addEventListener('click', () => set('layout.tabStyle', id));
+        stylePicker.append(b);
+      }
+    };
+    binders.push({ path: 'layout.tabStyle', update: renderStyles });
+    renderStyles();
     return [
       card(t('set.tabs'),
+        row(t('set.tabStyle'), t('set.tabStyleHint'), stylePicker, { block: true, keywords: 'drift lens thread faden tabstil' }),
+        row(t('set.tabPreview'), t('set.tabPreviewHint'), toggle('layout.tabPreview'), { keywords: 'vorschau preview' }),
+        row(t('set.tabTint'), t('set.tabTintHint'), toggle('layout.tabTint'), { keywords: 'farbe colour' }),
+        row(t('set.tabPulse'), t('set.tabPulseHint'), toggle('layout.tabPulse')),
+        row(t('set.tabStacks'), t('set.tabStacksHint'), toggle('layout.tabStacks'), { keywords: 'stapel stack' }),
         row(t('set.tabPosition'), t('set.tabPositionHint'), seg('layout.tabPosition', [['top', t('pos.top')], ['left', t('pos.left')], ['right', t('pos.right')]]), { keywords: 'vertikal vertical seitenleiste sidebar' }),
         row(t('set.compact'), t('set.compactHint'), toggle('layout.compact')),
         row(t('set.tabWidth'), null, seg('layout.tabWidth', [['fixed', t('tabw.fixed')], ['fit', t('tabw.fit')], ['compact', t('tabw.compact')]])),

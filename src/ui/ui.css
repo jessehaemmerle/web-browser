@@ -59,7 +59,7 @@ body.integrated button, body.integrated input, body.integrated .tab, body.integr
 
 /* ---------------------------------------------------------------- horizontal tab strip */
 .strip {
-  display: flex; align-items: flex-end; gap: 2px; background: var(--n-frame);
+  position: relative; display: flex; align-items: flex-end; gap: 2px; background: var(--n-frame);
   padding: 6px calc(var(--wco) + 6px) 0 6px; min-height: calc(var(--n-tab-h) + 6px); min-width: 0;
 }
 body.tabs-side .strip { display: none; }
@@ -84,8 +84,8 @@ body.tab-width-compact { --tab-w: 160px; --tab-min: 40px; }
 .tab.active { background: var(--n-toolbar); color: var(--n-text); z-index: 1; }
 .tabs:not(.vertical) .tab.active::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: var(--n-toolbar); }
 .tab.pinned { width: calc(var(--n-tab-h) + 8px); min-width: calc(var(--n-tab-h) + 8px); flex: none; padding: 0; justify-content: center; }
-.tab.pinned .tab-title, .tab.pinned .tab-close { display: none; }
-.tab.sleeping .tab-icon, .tab.sleeping .tab-title { opacity: .55; }
+.tab.pinned .tab-text, .tab.pinned .tab-close { display: none; }
+.tab.sleeping .tab-icon, .tab.sleeping .tab-text { opacity: .55; }
 .tab.dragging { opacity: .4; }
 .tab.split-member .tab-icon::after { content: ""; position: absolute; right: -3px; bottom: -3px; width: 7px; height: 7px; border-radius: 50%; background: var(--n-accent); border: 1.5px solid var(--n-toolbar); }
 .tab-icon { position: relative; width: 16px; height: 16px; flex: none; display: flex; align-items: center; justify-content: center; }
@@ -93,7 +93,10 @@ body.tab-width-compact { --tab-w: 160px; --tab-min: 40px; }
 .tab-icon .ic { width: 16px; height: 16px; }
 .tab-icon .spinner { width: 14px; height: 14px; border-radius: 50%; border: 2px solid color-mix(in srgb, var(--n-accent) 25%, transparent); border-top-color: var(--n-accent); animation: spin .8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
-.tab-title { flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; mask-image: linear-gradient(90deg, #000 calc(100% - 18px), transparent); }
+.tab-text { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
+.tab-title { display: block; white-space: nowrap; overflow: hidden; mask-image: linear-gradient(90deg, #000 calc(100% - 18px), transparent); }
+.tab-sub { display: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: .84em; color: var(--n-muted); }
+.tab-dot, .tab-wave, .eq { display: none; }
 .tab-audio { width: 20px; height: 20px; border-radius: 5px; display: none; align-items: center; justify-content: center; color: var(--n-muted); flex: none; }
 .tab-audio .ic { width: 15px; height: 15px; }
 .tab.audible .tab-audio, .tab.muted .tab-audio { display: inline-flex; }
@@ -106,7 +109,7 @@ body.close-never .tab-close { display: none; }
 .tab.narrow .tab-close { display: none; }
 .tab.narrow.active .tab-close { display: inline-flex; opacity: 1; }
 .tab.narrow { padding: 0; justify-content: center; }
-.tab.narrow .tab-title { display: none; }
+.tab.narrow .tab-text { display: none; }
 
 .drop-indicator { position: absolute; width: 2px; background: var(--n-accent); border-radius: 2px; pointer-events: none; z-index: 5; }
 .tabs.vertical .drop-indicator { height: 2px; width: auto; }
@@ -192,7 +195,7 @@ body.tabs-right .sidebar { border-left: 1px solid var(--n-border); }
 .tabs.vertical .tab { width: auto; flex: none; border-radius: var(--n-radius); padding: 0 6px 0 10px; }
 .tabs.vertical .tab.active { box-shadow: 0 0 0 1px var(--n-border); }
 .tabs.vertical .tab.pinned { width: auto; justify-content: flex-start; padding: 0 10px; }
-.tabs.vertical .tab.pinned .tab-title { display: block; }
+.tabs.vertical .tab.pinned .tab-text { display: flex; }
 .tabs.vertical .group-chip { align-self: flex-start; margin: 6px 4px 2px; }
 .vnewtab { display: flex; align-items: center; gap: 8px; margin: 4px 6px 8px; height: var(--n-tab-h); padding: 0 10px; border-radius: var(--n-radius); color: var(--n-muted); }
 .vnewtab:hover { background: var(--n-hover); color: var(--n-text); }
@@ -200,7 +203,7 @@ body.tabs-right .sidebar { border-left: 1px solid var(--n-border); }
 body.tabs-right .sidebar-resize { right: auto; left: -3px; }
 body.sidebar-collapsed .sidebar { width: calc(var(--n-tab-h) + 22px); }
 body.sidebar-collapsed .tabs.vertical .tab { padding: 0; justify-content: center; }
-body.sidebar-collapsed .tabs.vertical .tab-title, body.sidebar-collapsed .tabs.vertical .tab-close, body.sidebar-collapsed .vnewtab span, body.sidebar-collapsed .group-chip span, body.sidebar-collapsed .tab-audio { display: none; }
+body.sidebar-collapsed .tabs.vertical .tab-text, body.sidebar-collapsed .tabs.vertical .tab-close, body.sidebar-collapsed .vnewtab span, body.sidebar-collapsed .group-chip span, body.sidebar-collapsed .tab-audio { display: none; }
 body.sidebar-collapsed .vnewtab { justify-content: center; padding: 0; }
 body.sidebar-collapsed .sidebar-resize { display: none; }
 body.sidebar-collapsed .sidebar-head { justify-content: center; }
@@ -311,3 +314,124 @@ body.html-fullscreen #tabstrip, body.html-fullscreen #toolbar, body.html-fullscr
 .color-dot.sel { border-color: var(--n-text); box-shadow: inset 0 0 0 2px var(--n-surface); }
 
 .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--n-text); color: var(--n-frame); padding: 8px 14px; border-radius: 999px; font-weight: 550; z-index: 200; pointer-events: none; }
+
+/* =================================================================== tab styles */
+/* ---- Drift: tabs drift from wide (active) to small drops (long unused / asleep) */
+body.ts-drift .tabs:not(.vertical) .tab { transition: width .32s ease, flex-basis .32s ease, min-width .32s ease, border-radius .32s ease, margin .32s ease, height .32s ease, background var(--n-speed), color var(--n-speed), opacity .4s; }
+body.ts-drift .tabs:not(.vertical) .tab[data-tier="active"] { --tab-w: 260px; }
+body.ts-drift .tabs:not(.vertical) .tab[data-tier="mid"] { --tab-w: 156px; --tab-min: 64px; }
+body.ts-drift .tabs:not(.vertical) .tab[data-tier="old"] { --tab-w: 108px; --tab-min: 56px; color: color-mix(in srgb, var(--n-muted) 85%, transparent); }
+body.ts-drift .tabs:not(.vertical) .tab[data-tier="drop"] {
+  --tab-w: 32px; --tab-min: 32px; width: 32px; flex: none; padding: 0; justify-content: center;
+  height: calc(var(--n-tab-h) - 8px); margin: 0 2px 4px; border-radius: 999px;
+  background: color-mix(in srgb, var(--n-text) 6%, transparent);
+}
+body.ts-drift .tabs:not(.vertical) .tab[data-tier="drop"] .tab-text,
+body.ts-drift .tabs:not(.vertical) .tab[data-tier="drop"] .tab-close,
+body.ts-drift .tabs:not(.vertical) .tab[data-tier="drop"] .tab-audio { display: none; }
+body.ts-drift .tabs:not(.vertical) .tab[data-tier="drop"]::before,
+body.ts-drift .tabs:not(.vertical) .tab[data-tier="drop"] + .tab::before { display: none; }
+body.ts-drift .tabs:not(.vertical) .tab[data-tier="drop"]:hover { background: var(--n-hover); transform: translateY(-1px); }
+/* sleeping drops dissolve like clouds */
+body.ts-drift .tab[data-tier="drop"].sleeping .tab-icon { opacity: .5; filter: saturate(.3) blur(.2px); }
+body.ts-drift .tabs:not(.vertical) .tab[data-tier="drop"].sleeping { background: transparent; box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--n-muted) 35%, transparent); }
+/* vertical drift: older tabs become compact lines */
+body.ts-drift .tabs.vertical .tab { transition: height .3s ease, opacity .4s, background var(--n-speed), color var(--n-speed); }
+body.ts-drift .tabs.vertical .tab[data-tier="active"] { font-weight: 600; }
+body.ts-drift .tabs.vertical .tab[data-tier="mid"] { color: var(--n-muted); }
+body.ts-drift .tabs.vertical .tab[data-tier="old"] { height: calc(var(--n-tab-h) - 6px); font-size: .94em; color: var(--n-muted); }
+body.ts-drift .tabs.vertical .tab[data-tier="drop"] { height: calc(var(--n-tab-h) - 11px); font-size: .86em; color: var(--n-muted); }
+body.ts-drift .tabs.vertical .tab[data-tier="drop"] .tab-icon { transform: scale(.8); }
+
+/* ---- Lens: small tabs that magnify around the pointer (widths set by JS) */
+body.ts-lens .tabs:not(.vertical) .tab:not(.pinned) { flex: none; min-width: 0; max-width: none; transition: width 110ms ease-out, background var(--n-speed); }
+body.ts-lens .tabs:not(.vertical) .tab.lens-small { padding: 0; justify-content: center; }
+body.ts-lens .tabs:not(.vertical) .tab.lens-small .tab-text,
+body.ts-lens .tabs:not(.vertical) .tab.lens-small .tab-close,
+body.ts-lens .tabs:not(.vertical) .tab.lens-small .tab-audio { display: none; }
+body.ts-lens .tabs:not(.vertical) .tab.lens-small:not(.active):not(:hover)::before { display: none; }
+body.ts-lens .tabs.vertical .tab { transition: height 110ms ease-out, background var(--n-speed); }
+body.ts-lens .tabs.vertical .tab.magnified .tab-sub { display: block; }
+body.ts-lens .tabs.vertical .tab.magnified .tab-icon { transform: scale(1.15); }
+body.ts-lens .tabs.vertical .tab .tab-icon { transition: transform 110ms ease-out; }
+
+/* ---- Thread: children hang from the tab they were opened from */
+body.ts-thread:not(.tabs-side) .strip { padding-top: 15px; }
+#threads { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; z-index: 2; }
+#threads path { fill: none; stroke-width: 1.5; stroke-linecap: round; opacity: .6; }
+#threads circle { opacity: .75; }
+body.ts-thread .tabs:not(.vertical) .tab.child { height: calc(var(--n-tab-h) - 4px); }
+body.ts-thread .tabs.vertical .tab.child { margin-left: calc(var(--depth, 1) * 14px); }
+body.ts-thread .tabs.vertical .tab.child::before {
+  content: ""; position: absolute; left: -9px; top: -4px; width: 8px; height: calc(50% + 4px);
+  border-left: 1.5px solid color-mix(in srgb, var(--tint, var(--n-accent)) 55%, transparent);
+  border-bottom: 1.5px solid color-mix(in srgb, var(--tint, var(--n-accent)) 55%, transparent);
+  border-bottom-left-radius: 7px; pointer-events: none;
+}
+body.sidebar-collapsed.ts-thread .tabs.vertical .tab.child { margin-left: 0; }
+body.sidebar-collapsed.ts-thread .tabs.vertical .tab.child::before { display: none; }
+
+/* ---- Stacks: several tabs of one site as a deck of cards */
+.tab.stack { --tab-w: 150px; cursor: default; }
+.tabs:not(.vertical) .tab.stack { flex: 0 1 150px; }
+.stack-icons { position: relative; width: 22px; height: 18px; flex: none; }
+.stack-layer { position: absolute; left: 0; top: 1px; width: 16px; height: 16px; border-radius: 4px; display: flex; align-items: center; justify-content: center; background: var(--n-surface); box-shadow: 0 0 0 1.5px var(--n-frame); }
+.stack-layer img, .stack-layer .ic { width: 14px; height: 14px; }
+.stack-layer:nth-last-child(2) { left: 3px; top: -1px; opacity: .85; }
+.stack-layer:nth-last-child(3) { left: 6px; top: -3px; opacity: .6; }
+.stack-layer:last-child { left: 0; top: 2px; z-index: 2; }
+.stack-count { flex: none; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; font-size: .78em; font-weight: 700; line-height: 18px; text-align: center; background: color-mix(in srgb, var(--tint, var(--n-accent)) 22%, transparent); color: var(--n-text); }
+.tab.stack .tab-sub { display: none; }
+.tab.stack.open { background: color-mix(in srgb, var(--tint, var(--n-accent)) 12%, transparent); }
+.tab.stack-member { background: color-mix(in srgb, var(--tint, var(--n-accent)) 7%, transparent); }
+.tabs:not(.vertical) .tab.stack-member { animation: fan .22s ease-out; }
+.tabs.vertical .tab.stack-member { margin-left: 14px; animation: fanv .2s ease-out; }
+.tabs.vertical .tab.stack .tab-sub { display: block; }
+@keyframes fan { from { opacity: 0; transform: translateX(-12px) scale(.96); } }
+@keyframes fanv { from { opacity: 0; transform: translateY(-6px); } }
+body.ts-drift .tabs:not(.vertical) .tab.stack[data-tier="drop"] { --tab-w: 58px; width: 58px; flex: none; padding: 0 6px; height: calc(var(--n-tab-h) - 8px); margin: 0 2px 4px; border-radius: 999px; }
+body.ts-drift .tabs:not(.vertical) .tab.stack[data-tier="drop"] .tab-text { display: none; }
+body.ts-lens .tabs:not(.vertical) .tab.stack.lens-small .stack-count { display: none; }
+
+/* ---- Page colour: the active tab takes on the site's colour */
+body.tab-tint .tabs:not(.vertical) .tab.active.tinted { background: linear-gradient(180deg, color-mix(in srgb, var(--tint) 26%, var(--n-toolbar)) 0%, var(--n-toolbar) 88%); }
+body.tab-tint .tab:not(.active).tinted:hover { background: color-mix(in srgb, var(--tint) 14%, var(--n-hover)); }
+body.tab-tint .tabs.vertical .tab.active.tinted { background: color-mix(in srgb, var(--tint) 16%, var(--n-toolbar)); box-shadow: inset 3px 0 0 var(--tint), 0 0 0 1px var(--n-border); }
+body.tab-tint.ts-drift .tabs:not(.vertical) .tab[data-tier="drop"].tinted:not(.sleeping) { background: color-mix(in srgb, var(--tint) 20%, transparent); }
+
+/* ---- Activity pulse */
+body.tab-pulse .tab-wave { display: block; position: absolute; left: 8px; right: 8px; bottom: 0; height: 2px; border-radius: 2px; overflow: hidden; opacity: 0; transition: opacity .3s; pointer-events: none; }
+body.tab-pulse .tab.loading .tab-wave { opacity: 1; }
+body.tab-pulse .tab-wave::before { content: ""; position: absolute; top: 0; bottom: 0; width: 45%; background: linear-gradient(90deg, transparent, var(--tint, var(--n-accent)), transparent); animation: tabwave 1.05s ease-in-out infinite; }
+@keyframes tabwave { from { transform: translateX(-100%); } to { transform: translateX(230%); } }
+body.tab-pulse .tab.audible:not(.muted) .tab-audio .ic { display: none; }
+body.tab-pulse .tab.audible:not(.muted) .tab-audio .eq { display: inline-flex; align-items: flex-end; gap: 2px; height: 12px; }
+.eq i { display: block; width: 2.5px; height: 100%; border-radius: 1px; background: var(--tint, var(--n-accent)); transform-origin: bottom; animation: eq .8s ease-in-out infinite alternate; }
+.eq i:nth-child(2) { animation-delay: -.35s; animation-duration: .65s; }
+.eq i:nth-child(3) { animation-delay: -.6s; animation-duration: .9s; }
+@keyframes eq { from { transform: scaleY(.25); } to { transform: scaleY(1); } }
+/* drops / small tabs still show that they play audio */
+body.tab-pulse.ts-drift .tabs:not(.vertical) .tab[data-tier="drop"].audible:not(.muted) { box-shadow: 0 0 0 1.5px var(--tint, var(--n-accent)); }
+body.tab-pulse .tab.attention .tab-dot, body.tab-pulse .tab.stack.attention .tab-dot { display: block; }
+.tab-dot { position: absolute; left: 21px; top: calc(50% - 10px); width: 7px; height: 7px; border-radius: 50%; background: var(--n-accent); box-shadow: 0 0 0 2px var(--n-frame); pointer-events: none; z-index: 2; }
+body.tab-pulse .tab.attention .tab-dot { animation: ping 1.6s ease-out 2; }
+@keyframes ping { 0% { box-shadow: 0 0 0 2px var(--n-frame), 0 0 0 2px color-mix(in srgb, var(--n-accent) 60%, transparent); } 100% { box-shadow: 0 0 0 2px var(--n-frame), 0 0 0 9px transparent; } }
+body.ts-drift .tabs:not(.vertical) .tab[data-tier="drop"] .tab-dot, body.ts-lens .tab.lens-small .tab-dot { left: auto; right: 2px; top: 2px; }
+
+/* ---- Live preview card */
+.tab-preview { position: fixed; z-index: 150; width: 268px; pointer-events: none; overflow: hidden; background: var(--n-surface); color: var(--n-text); border: 1px solid var(--n-border); border-radius: calc(var(--n-radius) + 4px); box-shadow: 0 18px 44px -14px rgba(5, 10, 25, .38), 0 2px 6px rgba(5, 10, 25, .1); animation: pop .14s ease-out; }
+.tab-preview.instant { animation: none; }
+.pv-text { padding: 9px 12px 10px; }
+.pv-title { font-weight: 600; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.pv-host { color: var(--n-muted); font-size: .9em; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pv-note { color: var(--n-accent); font-size: .86em; margin-top: 4px; }
+.pv-img { display: block; width: 100%; aspect-ratio: 16 / 10; object-fit: cover; object-position: left top; background: var(--n-toolbar); border-top: 1px solid var(--n-border); }
+.pv-img:not([src]) { background: linear-gradient(90deg, var(--n-toolbar), var(--n-hover), var(--n-toolbar)); background-size: 200% 100%; animation: shimmer 1.2s linear infinite; }
+@keyframes shimmer { to { background-position: -200% 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .tab, .tab-wave::before, .eq i, .tab-dot, .tab.stack-member, .tab-preview, .pv-img { animation: none !important; transition: none !important; }
+}
+body.no-anim .tab, body.no-anim .tab-wave::before, body.no-anim .eq i, body.no-anim .tab-dot, body.no-anim .tab-preview, body.no-anim .tab.stack-member { animation: none !important; transition: none !important; }
+body.ts-drift .tabs:not(.vertical) .tab.stack[data-tier="old"] { --tab-w: 150px; --tab-min: 104px; color: var(--n-text); }
+body.ts-lens .tabs:not(.vertical) .tab::before { display: none; }

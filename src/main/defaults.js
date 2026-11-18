@@ -81,6 +81,11 @@ const DEFAULTS = {
     tabPosition: 'top',       // top | left | right
     verticalTabWidth: 240,
     verticalTabsCollapsed: false,
+    tabStyle: 'drift',        // classic | drift | lens | thread | combo
+    tabPreview: true,         // page preview when hovering a tab
+    tabTint: true,            // tint the tab with the site's colour
+    tabPulse: true,           // loading wave, audio bars, dot for news in background tabs
+    tabStacks: true,          // collapse 3+ background tabs of the same site into a stack
     tabWidth: 'fixed',        // fixed | fit | compact
     tabCloseButton: 'hover',  // always | hover | active | never
     newTabPosition: 'afterCurrent', // end | afterCurrent

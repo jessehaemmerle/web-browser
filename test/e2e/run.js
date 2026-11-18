@@ -71,7 +71,7 @@ function screenshot(name) {
   // seed settings: no network-dependent extras, predictable language/theme
   fs.writeFileSync(path.join(profile, 'settings.json'), JSON.stringify({
     language: process.env.NIMBUS_LANG || 'de', startup: { mode: 'newtab' }, extensions: { enabled: true, autoUpdate: false },
-    search: { suggestions: false }, layout: { titlebar: 'system' }
+    search: { suggestions: false }, layout: { titlebar: 'system', tabStacks: false }
   }));
   const launch = () => electron.launch({
     executablePath: require('electron'),
@@ -411,10 +411,135 @@ function screenshot(name) {
     screenshot('extension');
   });
 
+  // ------------------------------------------------------------ tab display
+  const tabsOf = () => ui.$$eval('#tabs > .tab[data-id]', (els) => els.map((e) => ({ id: Number(e.dataset.id), tier: e.dataset.tier, w: Math.round(e.getBoundingClientRect().width), cls: e.className })));
+  await check('Tab-Stil Drift ist Standard; lange ungenutzte Tabs werden zu Tropfen', async () => {
+    await M(() => { global.nimbus.settings.set('layout.tabPosition', 'top'); global.nimbus.settings.set('appearance.mode', 'light'); global.nimbus.settings.set('appearance.preset', 'nimbus'); });
+    assert(await ui.evaluate(() => document.body.classList.contains('ts-drift')), 'ts-drift class');
+    const s = await state();
+    const bg = s.tabs.filter((t) => t.id !== s.active);
+    await M((_, ids) => { const w = global.nimbus.lastFocused; ids.forEach((id, i) => { const t = w.tabById(id); t.lastActive = Date.now() - [4 * 3600e3, 3600e3, 20 * 60e3, 60e3][i % 4]; }); w.scheduleState(); }, bg.map((t) => t.id));
+    await waitFor(async () => (await tabsOf()).some((t) => t.tier === 'drop' && t.w <= 34), 'drop tab');
+    const tabs = await tabsOf();
+    const active = tabs.find((t) => t.cls.includes('active'));
+    assert(active.tier === 'active' && active.w > 200, 'active wide: ' + active.w);
+    assert(tabs.some((t) => t.tier === 'mid') && tabs.some((t) => t.tier === 'old'), 'tiers: ' + tabs.map((t) => t.tier));
+    await sleep(500);
+    screenshot('tabs-drift');
+  });
+
+  await check('Seitenfarbe färbt den aktiven Tab (theme-color)', async () => {
+    await M((_, url) => global.nimbus.lastFocused.activeTab.load(url), base + '/tint.html');
+    await waitFor(async () => (await ui.evaluate(() => { const a = document.querySelector('.tab.active'); return a && a.classList.contains('tinted') && a.style.getPropertyValue('--tint').toLowerCase(); })) === '#d4380d', 'tint applied');
+    await sleep(400);
+    screenshot('tabs-tint');
+  });
+
+  await check('Aktivitätspuls: Punkt bei Neuigkeiten in Hintergrund-Tab', async () => {
+    const s = await state();
+    const tid = await M((_, url) => { const w = global.nimbus.lastFocused; return w.createTab({ url, active: false, atEnd: true }).id; }, base + '/tint.html?bg');
+    await waitFor(async () => (await ui.$$(`.tab[data-id="${tid}"].attention`)).length === 1, 'attention dot', 6000);
+    await M((_, id) => { const w = global.nimbus.lastFocused; w.activate(w.tabById(id)); }, tid);
+    await waitFor(async () => (await ui.$$(`.tab[data-id="${tid}"].attention`)).length === 0, 'cleared on activate');
+    await M((_, id) => { const w = global.nimbus.lastFocused; w.activate(w.tabById(id)); }, s.active);
+  });
+
+  await check('Live-Vorschau beim Überfahren eines Hintergrund-Tabs', async () => {
+    const tabs = await tabsOf();
+    const target = tabs.find((t) => !t.cls.includes('active') && t.w > 60) || tabs.find((t) => !t.cls.includes('active'));
+    await ui.hover(`.tab[data-id="${target.id}"]`);
+    await ui.waitForSelector('.tab-preview:not([hidden])', { timeout: 4000 });
+    await waitFor(async () => (await ui.evaluate(() => { const i = document.querySelector('.tab-preview .pv-img'); return !i || (i.src || '').startsWith('data:image'); })), 'thumbnail');
+    assert(await M(() => global.nimbus.lastFocused.overlay), 'ui above page while preview shows');
+    await sleep(300);
+    screenshot('tabs-preview');
+    await ui.mouse.move(640, 500);
+    await waitFor(async () => await ui.isHidden('.tab-preview'), 'preview hidden');
+    await waitFor(async () => !(await M(() => global.nimbus.lastFocused.overlay)), 'overlay released');
+  });
+
+  await check('Stapel pro Website fächert sich beim Überfahren auf', async () => {
+    const port = base.split(':').pop();
+    await M((_, p) => { const w = global.nimbus.lastFocused; for (let i = 0; i < 3; i++) w.createTab({ url: 'http://localhost:' + p + '/second.html?s' + i, active: false, atEnd: true }); }, port);
+    await M(() => global.nimbus.settings.set('layout.tabStacks', true));
+    await waitFor(async () => (await ui.$$('.tab.stack[data-stack="localhost"]')).length === 1, 'stack shown');
+    const label = await ui.$eval('.tab.stack[data-stack="localhost"]', (e) => e.getAttribute('aria-label'));
+    assert(/3/.test(label), 'stack label ' + label);
+    await ui.hover('.tab.stack[data-stack="localhost"]');
+    await waitFor(async () => (await ui.$$('.tab.stack-member')).length >= 3, 'fanned out');
+    await sleep(350);
+    screenshot('tabs-stack');
+    await ui.mouse.move(640, 500);
+    await waitFor(async () => (await ui.$$('.tab.stack-member')).length === 0, 'collapsed again', 4000);
+  });
+
+  await check('Tab-Stil Lupe vergrößert Tabs unter dem Mauszeiger', async () => {
+    await M((_, b) => { global.nimbus.settings.set('layout.tabStacks', false); const w = global.nimbus.lastFocused; for (let i = 0; i < 6; i++) w.createTab({ url: b + '/second.html?lens' + i, active: false, atEnd: true }); global.nimbus.settings.set('layout.tabStyle', 'lens'); }, base);
+    await waitFor(async () => await ui.evaluate(() => document.body.classList.contains('ts-lens')), 'lens class');
+    await sleep(300);
+    const items = await ui.$$('#tabs > .tab:not(.active):not(.pinned)');
+    const box = await items[Math.floor(items.length / 2)].boundingBox();
+    await ui.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await ui.mouse.move(box.x + box.width / 2 + 1, box.y + box.height / 2);
+    await sleep(400);
+    const widths = await ui.$$eval('#tabs > .tab:not(.pinned)', (els) => els.map((e) => Math.round(e.getBoundingClientRect().width)));
+    assert(Math.max(...widths) > 150 && Math.min(...widths) < 60, 'lens widths ' + widths);
+    screenshot('tabs-lens');
+    await ui.mouse.move(640, 500);
+  });
+
+  await check('Tab-Stil Faden verbindet Kind-Tabs mit ihrem Ursprung', async () => {
+    await M(() => { global.nimbus.settings.set('layout.tabStacks', false); global.nimbus.settings.set('layout.tabStyle', 'thread'); });
+    await M((_, url) => global.nimbus.lastFocused.activeTab.load(url), base + '/tint.html?parent');
+    const pp = await tabPage((u) => u.endsWith('?parent'));
+    await pp.waitForLoadState('domcontentloaded');
+    await pp.click('#child');
+    await waitFor(async () => (await ui.$$('#tabs > .tab.child')).length >= 1, 'child tab');
+    await waitFor(async () => (await ui.$$('#threads path')).length >= 1, 'thread drawn');
+    await sleep(500);
+    screenshot('tabs-thread');
+  });
+
+  await check('Drift + Faden auch seitlich (Baum + kompakte Zeilen)', async () => {
+    await M(() => { global.nimbus.settings.set('layout.tabStyle', 'combo'); global.nimbus.settings.set('layout.tabPosition', 'left'); global.nimbus.settings.set('appearance.mode', 'dark'); });
+    await waitFor(async () => (await ui.$$('#vtabs > .tab.child')).length >= 1, 'vertical child');
+    const ml = await ui.$eval('#vtabs > .tab.child', (e) => parseFloat(getComputedStyle(e).marginLeft));
+    assert(ml >= 14, 'indented ' + ml);
+    assert((await ui.$$('#vtabs > .tab[data-tier="drop"]')).length >= 1, 'compact drop rows');
+    await sleep(500);
+    screenshot('tabs-vertical-combo');
+    await M(() => { global.nimbus.settings.set('layout.tabPosition', 'top'); global.nimbus.settings.set('appearance.mode', 'light'); });
+  });
+
+  await check('Klassischer Stil bleibt wählbar', async () => {
+    await M(() => global.nimbus.settings.set('layout.tabStyle', 'classic'));
+    await waitFor(async () => await ui.evaluate(() => document.body.classList.contains('ts-classic')), 'classic class');
+    const tiers = (await tabsOf()).map((t) => t.tier).filter(Boolean);
+    assert(!tiers.length, 'no tiers in classic');
+    await M(() => global.nimbus.settings.set('layout.tabStyle', 'drift'));
+  });
+
+  await check('Einstellungsseite zeigt Tab-Stil-Auswahl', async () => {
+    await M(() => global.nimbus.openInternal(global.nimbus.lastFocused, 'settings', 'layout'));
+    await sleep(800);
+    const sp = await tabPage((u) => u.startsWith('nimbus://settings') && !u.includes('#appearance'));
+    const diag = await sp.evaluate(() => location.href + ' sections=' + document.querySelectorAll('section.sec').length + ' styles=' + document.querySelectorAll('.tabstyles').length).catch((e) => 'eval failed ' + e.message);
+    await sp.fill('#filter', '');
+    await sp.dispatchEvent('#filter', 'input');
+    await sp.waitForSelector('.tabstyles .preset', { timeout: 5000 }).catch(() => { throw new Error('no style picker: ' + diag + ' pages=' + pages().map((p) => p.url()).filter((u) => u.startsWith('nimbus://settings'))); });
+    assert((await sp.$$('.tabstyles .preset')).length === 5, '5 styles');
+    await sp.click('.tabstyles .preset:nth-child(3)');
+    await waitFor(async () => (await M(() => global.nimbus.settings.get('layout.tabStyle'))) === 'lens', 'lens chosen');
+    await sp.evaluate(() => document.getElementById('layout').scrollIntoView());
+    await sleep(400);
+    screenshot('settings-tabstyle');
+    await M(() => global.nimbus.settings.set('layout.tabStyle', 'drift'));
+  });
+
   await check('Einstellungen werden gespeichert (settings.json)', async () => {
     await M(() => global.nimbus.settings.flush());
     const saved = JSON.parse(fs.readFileSync(path.join(profile, 'settings.json'), 'utf8'));
-    assert(saved.appearance.preset === 'fjord', 'preset persisted');
+    assert(saved.appearance.preset === 'nimbus' && saved.layout.tabStyle === 'drift', 'settings persisted');
   });
 
   await check('Sitzung wird gespeichert', async () => {
