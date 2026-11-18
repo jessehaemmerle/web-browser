@@ -1,0 +1,16 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Fixture Home</title>
+<style>body{font-family:sans-serif;padding:30px;line-height:1.6}.ad-banner{background:#fc0;padding:10px}</style></head>
+<body>
+<h1>Nimbus test page</h1>
+<p id="text">The quick brown fox jumps over the lazy dog. Fox fox fox.</p>
+<p><a id="same" href="/second.html">Second page</a></p>
+<p><a id="blank" href="/second.html?blank" target="_blank">Second page in new tab</a></p>
+<p><a id="dl" href="/download.txt">Download file</a></p>
+<p><button id="popup" onclick="window.open('/second.html?popup','pop','width=400,height=300')">Popup</button></p>
+<p><input id="field" placeholder="Type here"></p>
+<div class="ad-banner" id="ad">Ad slot</div>
+<p><button id="notify" onclick="Notification.requestPermission().then(r => document.getElementById('perm').textContent = r)">Notifications</button> <span id="perm"></span></p>
+<script src="/ads.js"></script>
+<script>window.loadedAt = Date.now();</script>
+</body></html>

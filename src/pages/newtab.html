@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <title>Neuer Tab</title>
+  <link rel="stylesheet" href="common.css">
+  <link rel="stylesheet" href="newtab.css">
+</head>
+<body class="booting">
+  <div id="sky" class="sky" aria-hidden="true"><div class="cloud c1"></div><div class="cloud c2"></div><div class="cloud c3"></div></div>
+  <main class="nt">
+    <section class="hero">
+      <div id="clock" class="clock"></div>
+      <div id="date" class="date"></div>
+      <div id="greeting" class="greeting"></div>
+    </section>
+    <form id="search" class="search" role="search">
+      <svg class="ic" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l4.5 4.5"/></svg>
+      <input id="q" type="text" autocomplete="off" spellcheck="false" aria-label="Suche">
+    </form>
+    <section id="dial" class="dial" aria-label="Schnellwahl"></section>
+  </main>
+  <button id="customize" class="customize" data-i18n-title="nt.customize">
+    <svg class="ic" viewBox="0 0 24 24"><path d="M5 19h4L19 9l-4-4L5 15z"/></svg><span data-i18n="nt.customize"></span>
+  </button>
+  <dialog id="tile-dialog" class="tile-dialog">
+    <form method="dialog" id="tile-form">
+      <h2 id="tile-title"></h2>
+      <label><span data-i18n="nt.tileName"></span><input id="tile-name" type="text"></label>
+      <label><span data-i18n="nt.tileUrl"></span><input id="tile-url" type="text" required></label>
+      <div class="row">
+        <button type="button" id="tile-remove" class="btn danger" data-i18n="nt.remove"></button>
+        <span style="flex:1"></span>
+        <button type="button" id="tile-cancel" class="btn" data-i18n="dialog.cancel"></button>
+        <button type="submit" class="btn primary" data-i18n="dialog.save"></button>
+      </div>
+    </form>
+  </dialog>
+  <script src="shared/theme.js"></script>
+  <script src="shared/url.js"></script>
+  <script src="common.js"></script>
+  <script src="newtab.js"></script>
+</body>
+</html>

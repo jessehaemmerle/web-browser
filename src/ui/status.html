@@ -1,0 +1,16 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+  html,body{margin:0;background:transparent;overflow:hidden;height:100%}
+  #s{position:absolute;left:0;bottom:0;max-width:calc(100% - 10px);box-sizing:border-box;padding:4px 10px;font:12px system-ui,sans-serif;
+     white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-top-right-radius:6px;border:1px solid transparent;border-left:0;border-bottom:0}
+</style></head>
+<body><div id="s"></div>
+<script>
+  window.setStatus = (text, p, font) => {
+    const s = document.getElementById('s');
+    s.textContent = text;
+    s.style.background = p.toolbar; s.style.color = p.muted; s.style.borderColor = p.border;
+    if (font) s.style.fontFamily = font;
+  };
+</script></body></html>

@@ -1,0 +1,204 @@
+{
+  "name": "nimbus-browser",
+  "productName": "Nimbus",
+  "version": "1.0.0",
+  "description": "Schneller, einfacher und vollständig anpassbarer Webbrowser für Windows und Linux",
+  "main": "src/main/main.js",
+  "author": {
+    "name": "Jesse Hämmerle"
+  },
+  "license": "GPL-3.0-or-later",
+  "homepage": "https://github.com/jessehaemmerle/web-browser",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jessehaemmerle/web-browser.git"
+  },
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --inspect",
+    "test": "node --test \"test/unit/*.test.js\"",
+    "test:e2e": "node test/e2e/run.js",
+    "lint": "node scripts/check.js",
+    "dist:linux": "electron-builder --linux",
+    "dist:win": "electron-builder --win",
+    "dist": "electron-builder"
+  },
+  "dependencies": {
+    "@fontsource-variable/bricolage-grotesque": "^5.3.0",
+    "@ghostery/adblocker": "^2.20.3",
+    "@ghostery/adblocker-electron": "^2.20.3",
+    "adm-zip": "^0.6.1",
+    "electron-chrome-extensions": "^4.10.0",
+    "electron-chrome-web-store": "^0.13.0",
+    "tldts": "^7.5.4"
+  },
+  "devDependencies": {
+    "electron": "^45.3.4",
+    "electron-builder": "^26.18.0",
+    "playwright-core": "^1.63.0"
+  },
+  "build": {
+    "appId": "at.haemmerle.nimbus",
+    "productName": "Nimbus",
+    "copyright": "GPL-3.0-or-later",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "src/**/*",
+      "package.json",
+      "LICENSE",
+      "!**/*.map",
+      "!src/**/*.test.js"
+    ],
+    "asarUnpack": [
+      "node_modules/@ghostery/adblocker-electron-preload/**",
+      "node_modules/electron-chrome-extensions/dist/*.preload.js",
+      "node_modules/electron-chrome-web-store/dist/*.preload.js"
+    ],
+    "protocols": [
+      {
+        "name": "Web",
+        "schemes": [
+          "http",
+          "https"
+        ]
+      }
+    ],
+    "fileAssociations": [
+      {
+        "ext": [
+          "html",
+          "htm",
+          "xhtml"
+        ],
+        "name": "HTML-Dokument",
+        "role": "Viewer"
+      },
+      {
+        "ext": [
+          "pdf"
+        ],
+        "name": "PDF-Dokument",
+        "role": "Viewer"
+      },
+      {
+        "ext": [
+          "svg"
+        ],
+        "name": "SVG-Grafik",
+        "role": "Viewer"
+      }
+    ],
+    "win": {
+      "icon": "src/assets/icon.ico",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "Nimbus-${version}-${os}-${arch}-${target}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Nimbus",
+      "deleteAppDataOnUninstall": false,
+      "installerIcon": "src/assets/icon.ico",
+      "uninstallerIcon": "src/assets/icon.ico",
+      "license": "LICENSE",
+      "include": "build/installer.nsh"
+    },
+    "portable": {
+      "artifactName": "Nimbus-${version}-portable.${ext}"
+    },
+    "linux": {
+      "icon": "src/assets/icons",
+      "category": "Network;WebBrowser",
+      "executableName": "nimbus",
+      "synopsis": "Schneller, anpassbarer Webbrowser",
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "deb",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "rpm",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "tar.gz",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "mimeTypes": [
+        "text/html",
+        "application/xhtml+xml",
+        "x-scheme-handler/http",
+        "x-scheme-handler/https",
+        "application/pdf",
+        "image/svg+xml"
+      ],
+      "desktop": {
+        "entry": {
+          "Name": "Nimbus",
+          "GenericName": "Web Browser",
+          "GenericName[de]": "Webbrowser",
+          "Comment": "Fast, customizable web browser",
+          "Comment[de]": "Schneller, anpassbarer Webbrowser",
+          "StartupWMClass": "Nimbus",
+          "Keywords": "browser;web;internet;www;"
+        }
+      },
+      "artifactName": "Nimbus-${version}-${arch}.${ext}"
+    },
+    "deb": {
+      "depends": [
+        "libgtk-3-0",
+        "libnotify4",
+        "libnss3",
+        "libxss1",
+        "libxtst6",
+        "xdg-utils",
+        "libatspi2.0-0",
+        "libuuid1",
+        "libsecret-1-0"
+      ]
+    }
+  }
+}

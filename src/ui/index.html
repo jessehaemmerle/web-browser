@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src * data: blob: crx:; style-src 'self' 'unsafe-inline'; script-src 'self'; font-src 'self' data:">
+  <title>Nimbus</title>
+  <link rel="stylesheet" href="ui.css">
+  <style id="theme-vars"></style>
+  <style id="user-css"></style>
+</head>
+<body class="booting">
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol>
+      <symbol id="i-forward" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></symbol>
+      <symbol id="i-reload" viewBox="0 0 24 24"><path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3"/><path d="M19.5 4.5v4h-4"/></symbol>
+      <symbol id="i-stop" viewBox="0 0 24 24"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></symbol>
+      <symbol id="i-home" viewBox="0 0 24 24"><path d="M4 11l8-6.5 8 6.5"/><path d="M6.5 9.5V19h4v-5h3v5h4V9.5"/></symbol>
+      <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 4.2l2.4 4.9 5.4.8-3.9 3.8.9 5.4-4.8-2.6-4.8 2.6.9-5.4-3.9-3.8 5.4-.8z"/></symbol>
+      <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3.5l7 2.6v5.4c0 4.4-3 7.7-7 9-4-1.3-7-4.6-7-9V6.1z"/></symbol>
+      <symbol id="i-shield-off" viewBox="0 0 24 24"><path d="M12 3.5l7 2.6v5.4c0 4.4-3 7.7-7 9-4-1.3-7-4.6-7-9V6.1z"/><path d="M4 4l16 16"/></symbol>
+      <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4v11"/><path d="M7.5 10.5L12 15l4.5-4.5"/><path d="M5 19.5h14"/></symbol>
+      <symbol id="i-puzzle" viewBox="0 0 24 24"><path d="M9.5 4.5a2 2 0 0 1 4 0V6H17a1 1 0 0 1 1 1v3.5h-1.5a2 2 0 0 0 0 4H18V18a1 1 0 0 1-1 1h-3.5v-1.5a2 2 0 0 0-4 0V19H6a1 1 0 0 1-1-1v-3.5h1.5a2 2 0 0 0 0-4H5V7a1 1 0 0 1 1-1h3.5z"/></symbol>
+      <symbol id="i-split" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="14" rx="2"/><path d="M12 5v14"/></symbol>
+      <symbol id="i-menu" viewBox="0 0 24 24"><path d="M5 7h14M5 12h14M5 17h14"/></symbol>
+      <symbol id="i-close" viewBox="0 0 24 24"><path d="M7 7l10 10M17 7L7 17"/></symbol>
+      <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5.5v13M5.5 12h13"/></symbol>
+      <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5.5" y="10.5" width="13" height="9" rx="2"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/></symbol>
+      <symbol id="i-warn" viewBox="0 0 24 24"><path d="M12 4l8.5 15h-17z"/><path d="M12 10v4M12 16.5v.5"/></symbol>
+      <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 11v5M12 8v.5"/></symbol>
+      <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M4 12h16M12 4c2.5 2.5 3.5 5 3.5 8s-1 5.5-3.5 8c-2.5-2.5-3.5-5-3.5-8s1-5.5 3.5-8z"/></symbol>
+      <symbol id="i-folder" viewBox="0 0 24 24"><path d="M4 7.5a1.5 1.5 0 0 1 1.5-1.5h4l2 2h7a1.5 1.5 0 0 1 1.5 1.5v8a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5z"/></symbol>
+      <symbol id="i-chevrons" viewBox="0 0 24 24"><path d="M7 7l5 5-5 5M13 7l5 5-5 5"/></symbol>
+      <symbol id="i-chevron-down" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5"/></symbol>
+      <symbol id="i-chevron-up" viewBox="0 0 24 24"><path d="M7 14l5-5 5 5"/></symbol>
+      <symbol id="i-volume" viewBox="0 0 24 24"><path d="M5 10v4h3l4 3.5v-11L8 10z"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/></symbol>
+      <symbol id="i-mute" viewBox="0 0 24 24"><path d="M5 10v4h3l4 3.5v-11L8 10z"/><path d="M16 10l4 4M20 10l-4 4"/></symbol>
+      <symbol id="i-moon" viewBox="0 0 24 24"><path d="M18.5 14.5A7 7 0 0 1 9.5 5.5a7 7 0 1 0 9 9z"/></symbol>
+      <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l4.5 4.5"/></symbol>
+      <symbol id="i-history" viewBox="0 0 24 24"><path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3"/><path d="M4.5 4.5v4h4"/><path d="M12 8.5V12l2.5 2"/></symbol>
+      <symbol id="i-tab" viewBox="0 0 24 24"><rect x="3.5" y="6" width="17" height="13" rx="2"/><path d="M3.5 10h8V6"/></symbol>
+      <symbol id="i-sidebar" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="14" rx="2"/><path d="M9 5v14"/></symbol>
+      <symbol id="i-swap" viewBox="0 0 24 24"><path d="M7 8h11l-3-3M17 16H6l3 3"/></symbol>
+      <symbol id="i-check" viewBox="0 0 24 24"><path d="M5.5 12.5l4 4 9-9"/></symbol>
+      <symbol id="i-pin" viewBox="0 0 24 24"><path d="M9 4h6l-1 5 3 3v1.5H7V12l3-3z"/><path d="M12 13.5V20"/></symbol>
+      <symbol id="i-nimbus" viewBox="0 0 24 24"><path d="M7.5 18.5h9.5a4 4 0 0 0 .6-7.95A5.5 5.5 0 0 0 7 9.6 4.5 4.5 0 0 0 7.5 18.5z"/></symbol>
+      <symbol id="i-mask" viewBox="0 0 24 24"><path d="M3.5 10c0-1.5 1-2.5 2.5-2.5h12c1.5 0 2.5 1 2.5 2.5 0 3.5-2 6-4.5 6-2 0-2.6-2-4-2s-2 2-4 2C5.5 16 3.5 13.5 3.5 10z"/><circle cx="8.5" cy="10.8" r="1.2"/><circle cx="15.5" cy="10.8" r="1.2"/></symbol>
+      <symbol id="i-screen" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="11" rx="1.5"/><path d="M9 19.5h6M12 16v3.5"/></symbol>
+      <symbol id="i-key" viewBox="0 0 24 24"><circle cx="8" cy="15" r="3.5"/><path d="M10.5 12.5L18 5M15.5 7.5l2 2M13.5 9.5l1.5 1.5"/></symbol>
+    </defs>
+  </svg>
+
+  <div id="app">
+    <header id="tabstrip" class="strip" role="tablist" aria-orientation="horizontal">
+      <div id="private-badge" class="private-badge" hidden><svg class="ic"><use href="#i-mask"/></svg><span data-i18n="ui.private"></span></div>
+      <div id="tabs" class="tabs"></div>
+      <button id="newtab-btn" class="icon-btn newtab-btn" data-i18n-title="ui.newTab"><svg class="ic"><use href="#i-plus"/></svg></button>
+      <div class="drag-fill"></div>
+    </header>
+
+    <nav id="toolbar" class="toolbar">
+      <div id="toolbar-buttons-left" class="toolbar-group"></div>
+      <div id="address-wrap" class="address-wrap">
+        <button id="site-btn" class="site-btn" data-i18n-title="ui.siteInfo"><svg class="ic"><use href="#i-info"/></svg></button>
+        <input id="address" class="address" type="text" spellcheck="false" autocomplete="off" data-i18n-placeholder="ui.addressPlaceholder" aria-label="Adresse">
+        <button id="zoom-badge" class="zoom-badge" hidden></button>
+        <button id="star-btn" class="icon-btn star-btn" data-i18n-title="ui.bookmarkThis"><svg class="ic"><use href="#i-star"/></svg></button>
+        <div id="progress" class="progress"></div>
+      </div>
+      <div id="toolbar-buttons-right" class="toolbar-group"></div>
+    </nav>
+
+    <div id="bookmarks-bar" class="bookmarks-bar" hidden>
+      <div id="bm-items" class="bm-items"></div>
+      <button id="bm-more" class="icon-btn bm-more" hidden><svg class="ic"><use href="#i-chevrons"/></svg></button>
+    </div>
+
+    <main id="content">
+      <aside id="sidebar" class="sidebar" role="tablist" aria-orientation="vertical">
+        <div class="sidebar-head">
+          <button id="sidebar-toggle" class="icon-btn" data-i18n-title="ui.collapseSidebar"><svg class="ic"><use href="#i-sidebar"/></svg></button>
+          <div class="drag-fill"></div>
+        </div>
+        <div id="vtabs" class="tabs vertical"></div>
+        <button id="vnewtab-btn" class="vnewtab"><svg class="ic"><use href="#i-plus"/></svg><span data-i18n="ui.newTab"></span></button>
+        <div id="sidebar-resize" class="sidebar-resize"></div>
+      </aside>
+      <section id="viewport" class="viewport">
+        <div id="split-divider" class="split-divider" hidden>
+          <div class="split-tools">
+            <button id="split-swap" class="icon-btn" data-i18n-title="ui.splitSwap"><svg class="ic"><use href="#i-swap"/></svg></button>
+            <button id="split-close" class="icon-btn" data-i18n-title="ui.splitClose"><svg class="ic"><use href="#i-close"/></svg></button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <div id="findbar" class="findbar" hidden>
+      <svg class="ic muted"><use href="#i-search"/></svg>
+      <input id="find-input" type="text" spellcheck="false" data-i18n-placeholder="find.placeholder">
+      <span id="find-count" class="find-count"></span>
+      <button id="find-prev" class="icon-btn" data-i18n-title="find.prev"><svg class="ic"><use href="#i-chevron-up"/></svg></button>
+      <button id="find-next" class="icon-btn" data-i18n-title="find.next"><svg class="ic"><use href="#i-chevron-down"/></svg></button>
+      <label class="find-case"><input id="find-case" type="checkbox"><span data-i18n="find.matchCase"></span></label>
+      <button id="find-close" class="icon-btn" data-i18n-title="find.close"><svg class="ic"><use href="#i-close"/></svg></button>
+    </div>
+  </div>
+
+  <div id="overlay" class="overlay" hidden>
+    <div id="backdrop" class="backdrop"></div>
+  </div>
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+  <script src="../shared/theme.js"></script>
+  <script src="../shared/url.js"></script>
+  <script src="../shared/accel.js"></script>
+  <script src="ui.js"></script>
+</body>
+</html>
