@@ -349,7 +349,7 @@ class Tab {
       canGoForward: s.canGoForward, zoom: s.zoom, blocked: s.blocked, sleeping: s.sleeping, crashed: s.crashed,
       secure: s.secure, bookmarked: this.browser.bookmarks.isBookmarked(s.url),
       lastActive: this.lastActive, openerId: this.openerId && this.win.tabById(this.openerId) ? this.openerId : null,
-      tint: s.themeColor || s.faviconColor || null, attention: s.attention,
+      tint: s.themeColor || s.faviconColor || null, tintSource: s.themeColor ? 'page' : s.faviconColor ? 'favicon' : null, attention: s.attention,
       protection: this.browser.isProtectionEnabledFor(s.url)
     };
   }

@@ -189,7 +189,7 @@
       card(t('set.tabs'),
         row(t('set.tabStyle'), t('set.tabStyleHint'), stylePicker, { block: true, keywords: 'drift lens thread faden tabstil' }),
         row(t('set.tabPreview'), t('set.tabPreviewHint'), toggle('layout.tabPreview'), { keywords: 'vorschau preview' }),
-        row(t('set.tabTint'), t('set.tabTintHint'), toggle('layout.tabTint'), { keywords: 'farbe colour' }),
+        row(t('set.tabTint'), t('set.tabTintHint'), [toggle('layout.tabTint'), seg('layout.tintScope', [['bar', t('tint.bar')], ['tab', t('tint.tab')]])], { keywords: 'farbe colour leiste' }),
         row(t('set.tabPulse'), t('set.tabPulseHint'), toggle('layout.tabPulse')),
         row(t('set.tabStacks'), t('set.tabStacksHint'), toggle('layout.tabStacks'), { keywords: 'stapel stack' }),
         row(t('set.tabPosition'), t('set.tabPositionHint'), seg('layout.tabPosition', [['top', t('pos.top')], ['left', t('pos.left')], ['right', t('pos.right')]]), { keywords: 'vertikal vertical seitenleiste sidebar' }),

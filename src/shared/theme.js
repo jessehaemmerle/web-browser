@@ -109,5 +109,78 @@
     return { scheme, palette, vars, css };
   }
 
-  return { PRESETS, DENSITY, FONTS, compute, contrastRatio, readableOn, hexToRgb };
+  // ------------------------------------------------------------------ site colours
+
+  const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+  const toHex = (rgb) => '#' + rgb.map((v) => Math.round(clamp(v, 0, 255)).toString(16).padStart(2, '0')).join('');
+
+  /** Parse #rgb, #rgba, #rrggbb, #rrggbbaa, rgb()/rgba(), hsl()/hsla() → [r,g,b] or null. Transparent colours are ignored. */
+  function parseColor(input) {
+    const c = String(input || '').trim().toLowerCase();
+    let m = c.match(/^#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/);
+    if (m) {
+      let h = m[1];
+      if (h.length <= 4) h = h.split('').map((x) => x + x).join('');
+      if (h.length === 8 && parseInt(h.slice(6, 8), 16) < 128) return null;
+      return [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16));
+    }
+    m = c.match(/^rgba?\(([^)]+)\)$/);
+    if (m) {
+      const p = m[1].split(/[\s,\/]+/).filter(Boolean);
+      if (p.length < 3) return null;
+      const ch = p.slice(0, 3).map((x) => (x.endsWith('%') ? parseFloat(x) * 2.55 : parseFloat(x)));
+      const a = p[3] !== undefined ? (p[3].endsWith('%') ? parseFloat(p[3]) / 100 : parseFloat(p[3])) : 1;
+      if (ch.some((x) => !Number.isFinite(x)) || a < 0.5) return null;
+      return ch.map((x) => clamp(Math.round(x), 0, 255));
+    }
+    m = c.match(/^hsla?\(([^)]+)\)$/);
+    if (m) {
+      const p = m[1].split(/[\s,\/]+/).filter(Boolean);
+      if (p.length < 3) return null;
+      const h = ((parseFloat(p[0]) % 360) + 360) % 360, sat = parseFloat(p[1]) / 100, l = parseFloat(p[2]) / 100;
+      const a = p[3] !== undefined ? (p[3].endsWith('%') ? parseFloat(p[3]) / 100 : parseFloat(p[3])) : 1;
+      if (![h, sat, l].every(Number.isFinite) || a < 0.5) return null;
+      const k = (n) => (n + h / 30) % 12;
+      const f = (n) => l - sat * Math.min(l, 1 - l) * Math.max(-1, Math.min(k(n) - 3, 9 - k(n), 1));
+      return [f(0), f(8), f(4)].map((x) => Math.round(x * 255));
+    }
+    return null;
+  }
+
+  const mixRgb = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
+
+  /**
+   * Palette for the browser bar when it takes on a website's colour.
+   * `soft` (colour guessed from the favicon) blends it with the theme so it isn't loud.
+   * Text, icons and borders are chosen so they stay readable on the result.
+   */
+  function sitePalette(color, base, { soft = false } = {}) {
+    let rgb = parseColor(color);
+    if (!rgb) return null;
+    const baseToolbar = hexToRgb(base.toolbar) || [243, 246, 250];
+    if (soft) rgb = mixRgb(baseToolbar, rgb, 0.42);
+    let toolbar = toHex(rgb);
+    const dark = contrastRatio(toolbar, '#ffffff') >= contrastRatio(toolbar, '#111820');
+    const text = dark ? '#ffffff' : '#111820';
+    // very saturated colours (pure red …) are nudged just enough for readable text
+    for (let i = 0; i < 20 && contrastRatio(text, toolbar) < 4.6; i++) {
+      rgb = mixRgb(rgb, dark ? [0, 0, 0] : [255, 255, 255], 0.04);
+      toolbar = toHex(rgb);
+    }
+    const textRgb = hexToRgb(text);
+    const frame = toHex(mixRgb(rgb, [0, 0, 0], dark ? 0.22 : 0.08));
+    const surface = toHex(dark ? mixRgb(rgb, [0, 0, 0], 0.28) : mixRgb(rgb, [255, 255, 255], 0.72));
+    let muted = toHex(mixRgb(textRgb, rgb, 0.3));
+    for (let t = 0.3; t > 0 && contrastRatio(muted, toolbar) < 4.5; t -= 0.05) muted = toHex(mixRgb(textRgb, rgb, t));
+    const accent = contrastRatio(base.accent, toolbar) >= 3 && contrastRatio(base.accent, surface) >= 3 ? base.accent : text;
+    return {
+      frame, toolbar, surface, text, muted, accent,
+      accentText: readableOn(accent),
+      border: dark ? 'rgba(255,255,255,.2)' : 'rgba(0,0,0,.16)',
+      hover: dark ? 'rgba(255,255,255,.14)' : 'rgba(0,0,0,.08)',
+      dark
+    };
+  }
+
+  return { PRESETS, DENSITY, FONTS, compute, contrastRatio, readableOn, hexToRgb, parseColor, sitePalette };
 });

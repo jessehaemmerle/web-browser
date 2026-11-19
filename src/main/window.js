@@ -121,10 +121,20 @@ class NimbusWindow {
 
   applyTheme() {
     const theme = this.theme();
+    if (this.siteColors) theme.palette = { ...theme.palette, ...this.siteColors };
     this.win.setBackgroundColor(theme.palette.frame);
     if (this.integratedTitlebar) {
       try { this.win.setTitleBarOverlay(this.titleBarOverlay(theme)); } catch (_) { /* unsupported platform */ }
     }
+  }
+
+  /** The UI tints its bars with the website's colour – keep the OS window buttons in sync. */
+  setSiteColors(colors) {
+    const valid = colors && /^#[0-9a-f]{6}$/i.test(colors.frame) && /^#[0-9a-f]{6}$/i.test(colors.toolbar) && /^#[0-9a-f]{6}$/i.test(colors.text);
+    const next = valid ? { frame: colors.frame, toolbar: colors.toolbar, text: colors.text } : null;
+    if (JSON.stringify(next) === JSON.stringify(this.siteColors || null)) return;
+    this.siteColors = next;
+    this.applyTheme();
   }
 
   windowState() {

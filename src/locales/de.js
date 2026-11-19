@@ -264,8 +264,8 @@ module.exports = {
   "tabstyle.combo.desc": "Altern und Herkunft zugleich.",
   "set.tabPreview": "Vorschau beim Überfahren",
   "set.tabPreviewHint": "Zeigt Titel, Adresse und ein Bild der Seite.",
-  "set.tabTint": "Seitenfarbe im Tab",
-  "set.tabTintHint": "Der aktive Tab übernimmt dezent die Farbe der Website.",
+  "set.tabTint": "Farbe der Website übernehmen",
+  "set.tabTintHint": "Die obere Leiste – oder nur der aktive Tab – nimmt die Farbe der Website an. Text und Symbole bleiben automatisch gut lesbar.",
   "set.tabPulse": "Aktivitätspuls",
   "set.tabPulseHint": "Ladewelle, Tonwelle statt Lautsprecher und ein Punkt bei Neuigkeiten in Hintergrund-Tabs.",
   "set.tabStacks": "Stapel pro Website",
@@ -275,5 +275,7 @@ module.exports = {
   "preview.sleeping": "Schläft – lädt beim Öffnen neu",
   "preview.playing": "Spielt Ton ab",
   "preview.muted": "Stummgeschaltet",
-  "menu.tabStyle": "Tab-Stil"
+  "menu.tabStyle": "Tab-Stil",
+  "tint.bar": "Ganze Leiste",
+  "tint.tab": "Nur Tab"
 };

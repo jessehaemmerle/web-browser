@@ -394,9 +394,9 @@ body.ts-drift .tabs:not(.vertical) .tab.stack[data-tier="drop"] .tab-text { disp
 body.ts-lens .tabs:not(.vertical) .tab.stack.lens-small .stack-count { display: none; }
 
 /* ---- Page colour: the active tab takes on the site's colour */
-body.tab-tint .tabs:not(.vertical) .tab.active.tinted { background: linear-gradient(180deg, color-mix(in srgb, var(--tint) 26%, var(--n-toolbar)) 0%, var(--n-toolbar) 88%); }
+body.tint-scope-tab .tabs:not(.vertical) .tab.active.tinted { background: linear-gradient(180deg, color-mix(in srgb, var(--tint) 26%, var(--n-toolbar)) 0%, var(--n-toolbar) 88%); }
 body.tab-tint .tab:not(.active).tinted:hover { background: color-mix(in srgb, var(--tint) 14%, var(--n-hover)); }
-body.tab-tint .tabs.vertical .tab.active.tinted { background: color-mix(in srgb, var(--tint) 16%, var(--n-toolbar)); box-shadow: inset 3px 0 0 var(--tint), 0 0 0 1px var(--n-border); }
+body.tint-scope-tab .tabs.vertical .tab.active.tinted { background: color-mix(in srgb, var(--tint) 16%, var(--n-toolbar)); box-shadow: inset 3px 0 0 var(--tint), 0 0 0 1px var(--n-border); }
 body.tab-tint.ts-drift .tabs:not(.vertical) .tab[data-tier="drop"].tinted:not(.sleeping) { background: color-mix(in srgb, var(--tint) 20%, transparent); }
 
 /* ---- Activity pulse */
@@ -435,3 +435,15 @@ body.ts-drift .tabs:not(.vertical) .tab[data-tier="drop"] .tab-dot, body.ts-lens
 body.no-anim .tab, body.no-anim .tab-wave::before, body.no-anim .eq i, body.no-anim .tab-dot, body.no-anim .tab-preview, body.no-anim .tab.stack-member { animation: none !important; transition: none !important; }
 body.ts-drift .tabs:not(.vertical) .tab.stack[data-tier="old"] { --tab-w: 150px; --tab-min: 104px; color: var(--n-text); }
 body.ts-lens .tabs:not(.vertical) .tab::before { display: none; }
+
+/* ---- whole top bar in the website's colour (variables set by JS in #site-tint) */
+#tabstrip, #toolbar, #bookmarks-bar { transition: background-color .35s ease, color .35s ease, border-color .35s ease; }
+body.no-anim #tabstrip, body.no-anim #toolbar, body.no-anim #bookmarks-bar { transition: none; }
+body.bar-tinted #toolbar, body.bar-tinted #bookmarks-bar { border-bottom-color: color-mix(in srgb, var(--n-frame) 70%, #000 10%); }
+body.bar-tinted .tabs:not(.vertical) .tab.active { box-shadow: none; }
+body.bar-tinted .address-wrap { border-color: transparent; }
+body.bar-tinted .address-wrap:focus-within { border-color: var(--n-accent); }
+body.bar-tinted .private-badge { background: var(--n-text); color: var(--n-frame); }
+body.bar-tinted .site-btn.insecure { color: inherit; }
+body.bar-tinted-dark browser-action-list::part(action) { filter: drop-shadow(0 0 1px rgba(0,0,0,.35)); }
+@media (prefers-reduced-motion: reduce) { #tabstrip, #toolbar, #bookmarks-bar { transition: none; } }

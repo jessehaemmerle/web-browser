@@ -289,8 +289,8 @@ function screenshot(name) {
   await check('Dunkles Theme + Akzentfarbe live', async () => {
     await M(() => { global.nimbus.settings.set('appearance.mode', 'dark'); global.nimbus.settings.set('appearance.preset', 'fjord'); });
     await waitFor(async () => (await ui.evaluate(() => document.documentElement.dataset.scheme)) === 'dark', 'dark scheme');
-    const bg = await ui.evaluate(() => getComputedStyle(document.querySelector('#toolbar')).backgroundColor);
-    assert(bg === 'rgb(21, 35, 33)', 'toolbar color ' + bg);
+    const bg = await waitFor(async () => { const c = await ui.evaluate(() => getComputedStyle(document.querySelector('#toolbar')).backgroundColor); return c === 'rgb(21, 35, 33)' && c; }, 'toolbar turns fjord dark');
+    assert(bg, 'toolbar color');
     await sleep(300);
     screenshot('dark-fjord');
   });
@@ -428,11 +428,31 @@ function screenshot(name) {
     screenshot('tabs-drift');
   });
 
-  await check('Seitenfarbe färbt den aktiven Tab (theme-color)', async () => {
+  await check('Ganze obere Leiste übernimmt die Farbe der Website (theme-color)', async () => {
     await M((_, url) => global.nimbus.lastFocused.activeTab.load(url), base + '/tint.html');
-    await waitFor(async () => (await ui.evaluate(() => { const a = document.querySelector('.tab.active'); return a && a.classList.contains('tinted') && a.style.getPropertyValue('--tint').toLowerCase(); })) === '#d4380d', 'tint applied');
-    await sleep(400);
-    screenshot('tabs-tint');
+    await waitFor(async () => (await ui.evaluate(() => { const a = document.querySelector('.tab.active'); return a && a.classList.contains('tinted') && a.style.getPropertyValue('--tint').toLowerCase(); })) === '#d4380d', 'tint detected');
+    await waitFor(async () => await ui.evaluate(() => document.body.classList.contains('bar-tinted')), 'bar tinted');
+    await sleep(500); // colour transition
+    const colors = await ui.evaluate(() => {
+      const bg = (sel) => getComputedStyle(document.querySelector(sel)).backgroundColor;
+      return { toolbar: bg('#toolbar'), strip: bg('#tabstrip'), bookmarks: bg('#bookmarks-bar'), activeTab: bg('.tab.active'), text: getComputedStyle(document.querySelector('#toolbar')).color };
+    });
+    assert(colors.toolbar === 'rgb(212, 56, 13)', 'toolbar ' + colors.toolbar);
+    assert(colors.bookmarks === 'rgb(212, 56, 13)', 'bookmarks bar ' + colors.bookmarks);
+    assert(colors.activeTab === 'rgb(212, 56, 13)', 'active tab merges into bar ' + colors.activeTab);
+    assert(colors.strip !== 'rgb(228, 234, 242)' && /^rgb\(1[0-9]{2}, 4[0-9]/.test(colors.strip), 'tab strip darker site colour ' + colors.strip);
+    assert(colors.text === 'rgb(255, 255, 255)', 'readable white text ' + colors.text);
+    screenshot('bar-tint');
+    // new tab page → back to the theme colours
+    await M(() => global.nimbus.commands.run(global.nimbus.lastFocused, 'newTab'));
+    await waitFor(async () => !(await ui.evaluate(() => document.body.classList.contains('bar-tinted'))), 'untinted on new tab');
+    await M(() => global.nimbus.commands.run(global.nimbus.lastFocused, 'closeTab'));
+    await waitFor(async () => await ui.evaluate(() => document.body.classList.contains('bar-tinted')), 'tinted again');
+    // "tab only" keeps the bar in theme colours
+    await M(() => global.nimbus.settings.set('layout.tintScope', 'tab'));
+    await waitFor(async () => !(await ui.evaluate(() => document.body.classList.contains('bar-tinted'))), 'tab-only scope');
+    assert(await ui.evaluate(() => document.querySelector('.tab.active').classList.contains('tinted')), 'tab still tinted');
+    await M(() => global.nimbus.settings.set('layout.tintScope', 'bar'));
   });
 
   await check('Aktivitätspuls: Punkt bei Neuigkeiten in Hintergrund-Tab', async () => {

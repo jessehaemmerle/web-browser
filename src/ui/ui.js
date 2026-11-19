@@ -75,6 +75,8 @@
     $('#user-css').textContent = S.appearance.uiCss || '';
     document.documentElement.dataset.scheme = theme.scheme;
     document.body.classList.toggle('no-anim', S.appearance.animations === false);
+    lastSiteTint = null;
+    applyBarTint(activeTab());
   }
   darkMq.addEventListener('change', () => S && applyTheme());
 
@@ -93,6 +95,8 @@
     const style = L.tabStyle || 'classic';
     for (const c of ['classic', 'drift', 'lens', 'thread']) b.classList.toggle('ts-' + c, style === c || (style === 'combo' && (c === 'drift' || c === 'thread')));
     b.classList.toggle('tab-tint', !!L.tabTint);
+    b.classList.toggle('tint-scope-tab', !!L.tabTint && L.tintScope === 'tab');
+    lastSiteTint = null;
     b.classList.toggle('tab-pulse', !!L.tabPulse);
     if (style !== 'lens') clearLensStyles();
     for (const c of ['always', 'hover', 'active', 'never']) b.classList.toggle('close-' + c, L.tabCloseButton === c);
@@ -190,8 +194,30 @@
     if (tab && Math.abs((tab.zoom || 1) - (S.sites.defaultZoom || 1)) > 0.001) { zb.hidden = false; zb.textContent = Math.round(tab.zoom * 100) + ' %'; zb.title = t('ui.zoomReset'); }
     else zb.hidden = true;
     updateSiteButton(tab);
+    applyBarTint(tab);
     updateAddress(false);
     $('#progress').classList.toggle('on', !!(tab && tab.loading));
+  }
+
+  // ---- the whole top bar takes on the website's colour
+  let lastSiteTint = null;
+  function applyBarTint(tab) {
+    if (!S) return;
+    const on = S.layout.tabTint && (S.layout.tintScope || 'bar') === 'bar' && tab && !isNewTab(tab.url) && validColor(tab.tint);
+    let pal = null;
+    if (on) {
+      const base = NimbusTheme.compute(S.appearance, darkMq.matches).palette;
+      pal = NimbusTheme.sitePalette(tab.tint, base, { soft: tab.tintSource === 'favicon' });
+    }
+    const key = pal ? JSON.stringify(pal) : '';
+    if (key === lastSiteTint) return;
+    lastSiteTint = key;
+    document.body.classList.toggle('bar-tinted', !!pal);
+    document.body.classList.toggle('bar-tinted-dark', !!(pal && pal.dark));
+    $('#site-tint').textContent = pal ? `body.bar-tinted #tabstrip, body.bar-tinted #toolbar, body.bar-tinted #bookmarks-bar {
+      --n-frame: ${pal.frame}; --n-toolbar: ${pal.toolbar}; --n-surface: ${pal.surface}; --n-text: ${pal.text}; --n-muted: ${pal.muted};
+      --n-border: ${pal.border}; --n-hover: ${pal.hover}; --n-accent: ${pal.accent}; --n-accent-text: ${pal.accentText}; color: var(--n-text); }` : '';
+    call('setSiteColors', pal ? { frame: pal.frame, toolbar: pal.toolbar, text: pal.text } : null);
   }
 
   function updateSiteButton(tab) {

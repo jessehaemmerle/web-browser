@@ -61,6 +61,7 @@ function setupIpc(browser) {
     }),
     setRects: (ctx, rects) => ctx.win.setRects(rects),
     setOverlay: (ctx, on) => ctx.win.setOverlay(on),
+    setSiteColors: (ctx, colors) => ctx.win.setSiteColors(colors),
     navigate: (ctx, input, opts = {}) => {
       const url = b.resolve(input);
       if (!url) return;

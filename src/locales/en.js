@@ -238,8 +238,8 @@ module.exports = {
   "tabstyle.combo.desc": "Ageing and origin at once.",
   "set.tabPreview": "Preview on hover",
   "set.tabPreviewHint": "Shows title, address and a picture of the page.",
-  "set.tabTint": "Site colour in the tab",
-  "set.tabTintHint": "The active tab subtly takes on the website’s colour.",
+  "set.tabTint": "Take on the website’s colour",
+  "set.tabTintHint": "The top bar – or only the active tab – takes on the website’s colour. Text and icons automatically stay readable.",
   "set.tabPulse": "Activity pulse",
   "set.tabPulseHint": "Loading wave, audio bars instead of a speaker and a dot for news in background tabs.",
   "set.tabStacks": "Stacks per site",
@@ -249,5 +249,7 @@ module.exports = {
   "preview.sleeping": "Asleep – reloads when opened",
   "preview.playing": "Playing audio",
   "preview.muted": "Muted",
-  "menu.tabStyle": "Tab style"
+  "menu.tabStyle": "Tab style",
+  "tint.bar": "Whole bar",
+  "tint.tab": "Tab only"
 };

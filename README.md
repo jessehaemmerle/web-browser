@@ -49,7 +49,9 @@ Unter Linux funktioniert Nimbus mit X11 und Wayland (automatische Erkennung).
 | **Drift + Faden** | Beides zugleich. |
 | **Klassisch** | Gleich breite Tabs wie gewohnt. |
 
-Dazu vier einzeln abschaltbare Extras: **Live-Vorschau** (Bild der Seite beim Überfahren, auch für Hintergrund-Tabs), **Seitenfarbe im Tab** (der aktive Tab übernimmt die Farbe der Website), **Aktivitätspuls** (Ladewelle, Tonwelle statt Lautsprecher, Punkt bei Neuigkeiten wie „(3) Postfach“) und **Stapel pro Website** (ab drei Hintergrund-Tabs einer Website als Kartenstapel, der sich beim Überfahren auffächert). Alles funktioniert oben und in der Seitenleiste.
+Dazu vier einzeln abschaltbare Extras: **Live-Vorschau** (Bild der Seite beim Überfahren, auch für Hintergrund-Tabs), **Farbe der Website** (die ganze obere Leiste – Tabs, Symbolleiste, Adressleiste, Lesezeichenleiste und Fensterknöpfe – nimmt die Farbe der Website an; Text und Symbole bleiben automatisch kontraststark lesbar; wahlweise nur der aktive Tab), **Aktivitätspuls** (Ladewelle, Tonwelle statt Lautsprecher, Punkt bei Neuigkeiten wie „(3) Postfach“) und **Stapel pro Website** (ab drei Hintergrund-Tabs einer Website als Kartenstapel, der sich beim Überfahren auffächert). Alles funktioniert oben und in der Seitenleiste.
+
+![Obere Leiste in der Farbe der Website](docs/screenshots/leiste-seitenfarbe.png)
 
 | Tab-Stile in den Einstellungen | Stapel fächert sich auf | Live-Vorschau | Drift + Faden seitlich |
 |---|---|---|---|
@@ -76,7 +78,7 @@ Alle Optionen findest du unter **Menü ☰ › Einstellungen** (`Strg+,`) — mi
 | Bereich | Was du einstellen kannst |
 |---|---|
 | Aussehen | Hell/Dunkel/System, 6 Themes (u. a. Hoher Kontrast), Akzentfarbe, einzelne Farben, Schriftart und -größe, Dichte, Eckenradius, Animationen, Dunkelmodus für alle Seiten, **eigenes CSS für die Oberfläche** |
-| Layout | **Tab-Stil** (Drift, Lupe, Faden, Kombination, Klassisch) samt Vorschau, Seitenfarbe, Aktivitätspuls und Stapeln, Tab-Position, kompakter Modus, Tab-Breite, Schließen-Knopf, wo neue Tabs erscheinen, **Knöpfe der Symbolleiste ein-/ausblenden und umsortieren**, Lesezeichenleiste, vereinfachte Adressen, integrierte oder System-Titelleiste |
+| Layout | **Tab-Stil** (Drift, Lupe, Faden, Kombination, Klassisch) samt Vorschau, Farbe der Website (ganze Leiste oder nur Tab), Aktivitätspuls und Stapeln, Tab-Position, kompakter Modus, Tab-Breite, Schließen-Knopf, wo neue Tabs erscheinen, **Knöpfe der Symbolleiste ein-/ausblenden und umsortieren**, Lesezeichenleiste, vereinfachte Adressen, integrierte oder System-Titelleiste |
 | Neuer Tab | Hintergrund (Tageszeit-Himmel, Farbe, Verlauf, eigenes Bild, Abdunkeln), Uhr (12/24 h, Sekunden), Datum, Begrüßung mit Name, Suchfeld, Schnellwahl-Kacheln und Spalten, oder eine beliebige eigene Seite |
 | Suche | Standard-Suchmaschine (DuckDuckGo voreingestellt), eigene Suchmaschinen mit Kürzeln, Vorschläge |
 | Start & Tabs | Sitzung wiederherstellen / Startseite / bestimmte Seiten, Schlafmodus-Zeit, Mittelklick, Doppelklick, Mausrad-Tabwechsel |
