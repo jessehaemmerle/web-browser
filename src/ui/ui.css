@@ -47,6 +47,7 @@ input { font: inherit; color: inherit; }
 
 body.compact.tabs-top #app {
   grid-template-columns: minmax(0, 1fr) minmax(320px, 44%);
+  grid-template-rows: auto auto minmax(0, 1fr) auto; /* one row fewer than the normal layout */
   grid-template-areas: "tabs toolbar" "bookmarks bookmarks" "content content" "find find";
 }
 body.compact.tabs-top #toolbar { border-bottom: 1px solid var(--n-border); padding-right: calc(var(--wco) + 6px); }

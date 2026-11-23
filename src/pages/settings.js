@@ -636,6 +636,9 @@
     sec.append(el('h2', { text: t('sec.' + s.id) }));
     const lead = t('sec.' + s.id + '.lead');
     if (lead !== 'sec.' + s.id + '.lead') sec.append(el('p', { class: 'lead', text: lead }));
+    if (s.id === 'appearance' || s.id === 'layout') {
+      sec.append(el('div', { class: 'sec-actions' }, button(t('reset.designButton'), async () => { if (await call('resetDesign')) toast(t('reset.designDone')); }, 'small')));
+    }
     for (const part of s.build()) sec.append(part);
     main.append(sec);
     const a = el('a', { href: '#' + s.id, 'data-sec': s.id });

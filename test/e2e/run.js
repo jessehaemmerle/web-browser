@@ -556,6 +556,45 @@ function screenshot(name) {
     await M(() => global.nimbus.settings.set('layout.tabStyle', 'drift'));
   });
 
+  await check('Kompakter Modus (Tabs + Adressleiste in einer Zeile) zeigt die Seite', async () => {
+    const pageArea = () => M(() => global.nimbus.lastFocused.rects);
+    for (const style of ['drift', 'classic', 'lens']) {
+      for (const bar of ['always', 'never']) {
+        await M((_, o) => { const st = global.nimbus.settings; st.set('layout.tabPosition', 'top'); st.set('layout.compact', true); st.set('layout.tabStyle', o.style); st.set('layout.showBookmarksBar', o.bar); }, { style, bar });
+        await waitFor(async () => await ui.evaluate(() => document.body.classList.contains('compact')), 'compact class');
+        const rects = await waitFor(async () => { const r = await pageArea(); return r[0] && r[0].height > 400 && r; }, `page area visible (${style}, bar ${bar})`);
+        const tb = await ui.evaluate(() => { const a = document.querySelector('#tabstrip').getBoundingClientRect(); const b = document.querySelector('#toolbar').getBoundingClientRect(); return { sameRow: Math.abs(a.top - b.top) < 2, tabsBottom: a.bottom, barBottom: b.bottom }; });
+        assert(tb.sameRow, 'tabs and address bar in one row');
+        assert(rects[0].y >= Math.max(tb.tabsBottom, tb.barBottom) - 1, 'page below the bars');
+      }
+    }
+    // find bar must not push the page out of view either
+    await M(() => global.nimbus.commands.run(global.nimbus.lastFocused, 'find'));
+    await ui.waitForSelector('#findbar:not([hidden])');
+    await waitFor(async () => { const r = await pageArea(); return r[0] && r[0].height > 300; }, 'page area with find bar');
+    await sleep(300);
+    screenshot('compact-mode');
+    await ui.press('#find-input', 'Escape');
+  });
+
+  await check('Design zurücksetzen stellt Aussehen und Layout wieder her', async () => {
+    await M(() => { const st = global.nimbus.settings; st.set('appearance.preset', 'ember'); st.set('appearance.mode', 'dark'); st.set('layout.tabPosition', 'right'); });
+    const dialogs = await M((electron) => {
+      // answer the confirmation dialog automatically
+      const orig = electron.dialog.showMessageBox;
+      electron.dialog.showMessageBox = async () => { electron.dialog.showMessageBox = orig; return { response: 0 }; };
+      return true;
+    });
+    assert(dialogs, 'dialog stubbed');
+    await M(() => global.nimbus.resetDesign(global.nimbus.lastFocused));
+    const s = await M(() => ({ a: global.nimbus.settings.get('appearance'), l: global.nimbus.settings.get('layout'), bm: global.nimbus.bookmarks.flat().length }));
+    assert(s.a.preset === 'nimbus' && s.a.mode === 'system', 'appearance reset');
+    assert(s.l.tabPosition === 'top' && s.l.compact === false && s.l.tabStyle === 'drift', 'layout reset');
+    assert(s.bm >= 1, 'bookmarks kept');
+    await waitFor(async () => (await M(() => global.nimbus.lastFocused.rects))[0].height > 400, 'page visible after reset');
+    await M(() => { const st = global.nimbus.settings; st.set('appearance.mode', 'light'); st.set('layout.titlebar', 'system'); st.set('layout.tabStacks', false); });
+  });
+
   await check('Einstellungen werden gespeichert (settings.json)', async () => {
     await M(() => global.nimbus.settings.flush());
     const saved = JSON.parse(fs.readFileSync(path.join(profile, 'settings.json'), 'utf8'));

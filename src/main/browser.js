@@ -456,6 +456,19 @@ class Browser {
     try { return app.isDefaultProtocolClient('https'); } catch (_) { return false; }
   }
 
+  /** Restore appearance + layout defaults (reachable from the menu even if pages don't render). */
+  async resetDesign(win) {
+    const t = this.i18n.t;
+    const r = await dialog.showMessageBox(win && win.win, {
+      type: 'question', buttons: [t('reset.designConfirm'), t('dialog.cancel')], defaultId: 0, cancelId: 1,
+      message: t('reset.designTitle'), detail: t('reset.designDetail')
+    });
+    if (r.response !== 0) return false;
+    this.settings.reset('appearance');
+    this.settings.reset('layout');
+    return true;
+  }
+
   showTaskManager(win) {
     const t = this.i18n.t;
     const metrics = app.getAppMetrics();

@@ -263,7 +263,8 @@ class ContextMenu {
           item(t('menu.focusMode'), 'focusMode'),
           { type: 'separator' },
           { label: t('menu.theme'), submenu: ['system', 'light', 'dark'].map((m) => ({ label: t('theme.' + m), type: 'radio', checked: b.settings.get('appearance.mode') === m, click: () => b.settings.set('appearance.mode', m) })) },
-          { label: t('menu.customize'), click: () => b.openInternal(win, 'settings', 'appearance') }
+          { label: t('menu.customize'), click: () => b.openInternal(win, 'settings', 'appearance') },
+          { label: t('menu.resetDesign'), click: () => b.resetDesign(win) }
         ]
       },
       {

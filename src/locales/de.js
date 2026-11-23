@@ -277,5 +277,11 @@ module.exports = {
   "preview.muted": "Stummgeschaltet",
   "menu.tabStyle": "Tab-Stil",
   "tint.bar": "Ganze Leiste",
-  "tint.tab": "Nur Tab"
+  "tint.tab": "Nur Tab",
+  "menu.resetDesign": "Design zurücksetzen …",
+  "reset.designTitle": "Design zurücksetzen?",
+  "reset.designDetail": "Aussehen und Layout (Farben, Theme, Schrift, Tab-Stil, Tab-Position, Symbolleiste, Titelleiste) werden auf die Standardwerte gesetzt. Lesezeichen, Verlauf und alle anderen Einstellungen bleiben erhalten.",
+  "reset.designConfirm": "Zurücksetzen",
+  "reset.designButton": "Design zurücksetzen",
+  "reset.designDone": "Design zurückgesetzt"
 };

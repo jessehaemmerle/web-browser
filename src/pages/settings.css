@@ -13,6 +13,7 @@ html { background: var(--n-toolbar); }
 
 section.sec { margin-bottom: 42px; scroll-margin-top: 20px; }
 section.sec > h2 { font-size: 1.6em; margin: 0 0 4px; }
+.sec-actions { margin: -6px 0 14px; }
 section.sec > .lead { color: var(--n-muted); margin: 0 0 16px; max-width: 70ch; }
 .card { background: var(--n-surface); border: 1px solid var(--n-border); border-radius: calc(var(--n-radius) + 4px); margin-bottom: 16px; }
 .card > h3 { margin: 0; padding: 14px 18px 4px; font-size: 1.05em; }

@@ -181,6 +181,7 @@ function setupIpc(browser) {
     isDefaultBrowser: () => b.isDefaultBrowser(),
     paths: () => ({ userData: app.getPath('userData'), downloads: b.downloads.dir(), exe: app.getPath('exe') }),
     openPath: (ctx, p) => shell.openPath(p),
+    resetDesign: (ctx) => b.resetDesign(winOf(ctx)),
     restart: () => { b.saveSessionNow(); app.relaunch(); app.quit(); },
     errorAction: (ctx, action, url) => {
       const tab = ctx.tab;

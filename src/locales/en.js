@@ -251,5 +251,11 @@ module.exports = {
   "preview.muted": "Muted",
   "menu.tabStyle": "Tab style",
   "tint.bar": "Whole bar",
-  "tint.tab": "Tab only"
+  "tint.tab": "Tab only",
+  "menu.resetDesign": "Reset design …",
+  "reset.designTitle": "Reset the design?",
+  "reset.designDetail": "Appearance and layout (colours, theme, font, tab style, tab position, toolbar, title bar) go back to their defaults. Bookmarks, history and all other settings are kept.",
+  "reset.designConfirm": "Reset",
+  "reset.designButton": "Reset design",
+  "reset.designDone": "Design reset"
 };
