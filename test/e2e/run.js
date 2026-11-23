@@ -76,7 +76,7 @@ function screenshot(name) {
   const launch = () => electron.launch({
     executablePath: require('electron'),
     args: [ROOT, '--no-sandbox', '--window-size=1280,820'],
-    env: { ...process.env, NIMBUS_PROFILE: profile, NIMBUS_NO_OZONE_HINT: '1', ELECTRON_ENABLE_LOGGING: '0' },
+    env: { ...process.env, NIMBUS_PROFILE: profile, NIMBUS_NO_OZONE_HINT: '1', ELECTRON_ENABLE_LOGGING: '1' },
     timeout: 60000
   });
   let app = await launch();

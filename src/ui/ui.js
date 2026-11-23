@@ -1302,6 +1302,18 @@
 
   // ------------------------------------------------------------------ events from main
   api.on((channel, payload) => {
+    // events can arrive before uiInit() has delivered the settings: keep the newest
+    // state/window state and let init() render once everything is there
+    if (!S) {
+      if (channel === 'state') state = payload;
+      else if (channel === 'window-state') winState = payload;
+      else if (channel !== 'event') pendingUi.push([channel, payload]);
+      return;
+    }
+    handleUiEvent(channel, payload);
+  });
+  const pendingUi = [];
+  function handleUiEvent(channel, payload) {
     switch (channel) {
       case 'state': {
         const prevActive = state.activeId;
@@ -1339,7 +1351,7 @@
       }
       case 'event': onEvent(payload.name, payload.payload); break;
     }
-  });
+  }
 
   function onEvent(name, payload) {
     if (name === 'settings') {
@@ -1373,5 +1385,7 @@
     updateToolbar();
     document.body.classList.remove('booting');
     queueRects();
+    // replay one-off requests (focus address bar, prompts …) that came in during start-up
+    for (const [channel, payload] of pendingUi.splice(0)) handleUiEvent(channel, payload);
   })();
 })();
