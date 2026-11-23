@@ -5,7 +5,8 @@
   "description": "Schneller, einfacher und vollständig anpassbarer Webbrowser für Windows und Linux",
   "main": "src/main/main.js",
   "author": {
-    "name": "Jesse Hämmerle"
+    "name": "Jesse Hämmerle",
+    "email": "jessehaemmerle@users.noreply.github.com"
   },
   "license": "GPL-3.0-or-later",
   "homepage": "https://github.com/jessehaemmerle/web-browser",
@@ -114,7 +115,7 @@
           ]
         }
       ],
-      "artifactName": "Nimbus-${version}-${os}-${arch}-${target}.${ext}"
+      "artifactName": "Nimbus-${version}-win-${arch}.${ext}"
     },
     "nsis": {
       "oneClick": false,
@@ -127,7 +128,8 @@
       "installerIcon": "src/assets/icon.ico",
       "uninstallerIcon": "src/assets/icon.ico",
       "license": "LICENSE",
-      "include": "build/installer.nsh"
+      "include": "build/installer.nsh",
+      "artifactName": "Nimbus-${version}-setup-${arch}.${ext}"
     },
     "portable": {
       "artifactName": "Nimbus-${version}-portable.${ext}"
@@ -185,7 +187,10 @@
           "Keywords": "browser;web;internet;www;"
         }
       },
-      "artifactName": "Nimbus-${version}-${arch}.${ext}"
+      "artifactName": "Nimbus-${version}-${arch}.${ext}",
+      "maintainer": "Jesse Hämmerle <jessehaemmerle@users.noreply.github.com>",
+      "vendor": "Nimbus",
+      "syncDesktopName": true
     },
     "deb": {
       "depends": [
@@ -200,5 +205,6 @@
         "libsecret-1-0"
       ]
     }
-  }
+  },
+  "desktopName": "nimbus.desktop"
 }
