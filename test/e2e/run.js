@@ -412,7 +412,7 @@ function screenshot(name) {
   });
 
   // ------------------------------------------------------------ tab display
-  const tabsOf = () => ui.$$eval('#tabs > .tab[data-id]', (els) => els.map((e) => ({ id: Number(e.dataset.id), tier: e.dataset.tier, w: Math.round(e.getBoundingClientRect().width), cls: e.className })));
+  const tabsOf = () => ui.$$eval('#tabs > .tab[data-id]:not([data-leaving])', (els) => els.map((e) => ({ id: Number(e.dataset.id), tier: e.dataset.tier, w: Math.round(e.getBoundingClientRect().width), cls: e.className })));
   await check('Tab-Stil Drift ist Standard; lange ungenutzte Tabs werden zu Tropfen', async () => {
     await M(() => { global.nimbus.settings.set('layout.tabPosition', 'top'); global.nimbus.settings.set('appearance.mode', 'light'); global.nimbus.settings.set('appearance.preset', 'nimbus'); });
     assert(await ui.evaluate(() => document.body.classList.contains('ts-drift')), 'ts-drift class');
@@ -505,7 +505,60 @@ function screenshot(name) {
     const widths = await ui.$$eval('#tabs > .tab:not(.pinned)', (els) => els.map((e) => Math.round(e.getBoundingClientRect().width)));
     assert(Math.max(...widths) > 150 && Math.min(...widths) < 60, 'lens widths ' + widths);
     screenshot('tabs-lens');
+    // magnification must not jump when a tab updates while the pointer stands still
+    const tabWidths = () => ui.$$eval('#tabs > .tab:not(.pinned):not([data-leaving])', (els) => els.map((e) => Math.round(e.getBoundingClientRect().width)));
+    const beforeUpdate = await tabWidths();
+    await M(() => { const w = global.nimbus.lastFocused; w.tabs[w.tabs.length - 1].state.title = 'Neuer Titel'; w.sendState(); });
+    await sleep(300);
+    const afterUpdate = await tabWidths();
+    assert(beforeUpdate.indexOf(Math.max(...beforeUpdate)) === afterUpdate.indexOf(Math.max(...afterUpdate)), 'lens stays under the pointer: ' + beforeUpdate + ' / ' + afterUpdate);
     await ui.mouse.move(640, 500);
+  });
+
+  await check('Lupe wirkt auch bei wenigen Tabs', async () => {
+    const s = await state();
+    await M((_, keep) => { const w = global.nimbus.lastFocused; for (const t of [...w.tabs]) if (t.id !== keep) w.closeTab(t, { remember: false }); for (let i = 0; i < 3; i++) w.createTab({ url: 'data:text/html,<title>Klein ' + i + '</title>x', active: false, atEnd: true }); }, s.active);
+    await waitFor(async () => (await ui.$$('#tabs > .tab:not([data-leaving])')).length === 4, '4 tabs');
+    await sleep(500);
+    const idle = await ui.$$eval('#tabs > .tab:not([data-leaving])', (els) => els.map((e) => Math.round(e.getBoundingClientRect().width)));
+    assert(Math.min(...idle) < 60, 'small tabs at rest ' + idle);
+    const items = await ui.$$('#tabs > .tab:not(.active):not([data-leaving])');
+    const box = await items[1].boundingBox();
+    await ui.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await ui.mouse.move(box.x + box.width / 2 + 1, box.y + box.height / 2);
+    await sleep(400);
+    const hovered = await ui.$$eval('#tabs > .tab:not([data-leaving])', (els) => els.map((e) => Math.round(e.getBoundingClientRect().width)));
+    assert(Math.max(...hovered) > 180, 'magnified with few tabs ' + hovered);
+    await ui.mouse.move(640, 500);
+    await sleep(400);
+  });
+
+  await check('Tab-Animationen: Öffnen wächst, Schließen schrumpft weg', async () => {
+    await M(() => global.nimbus.settings.set('layout.tabStyle', 'classic'));
+    await waitFor(async () => await ui.evaluate(() => document.body.classList.contains('ts-classic')), 'classic');
+    await sleep(400);
+    // opening: the new tab grows in instead of appearing at full width
+    const id = await M(() => global.nimbus.lastFocused.createTab({ url: 'data:text/html,<title>Animiert</title>x', active: false, atEnd: true }).id);
+    const samples = [];
+    for (let i = 0; i < 6; i++) { samples.push(await ui.evaluate((tid) => { const e = document.querySelector(`.tab[data-id="${tid}"]`); return e ? Math.round(e.getBoundingClientRect().width) : -1; }, id)); await sleep(40); }
+    await sleep(300);
+    const final = await ui.evaluate((tid) => Math.round(document.querySelector(`.tab[data-id="${tid}"]`).getBoundingClientRect().width), id);
+    assert(samples.some((w) => w >= 0 && w < final - 20), 'grows in: ' + samples + ' → ' + final);
+    // closing: the tab stays briefly as a shrinking ghost, then disappears
+    await M((_, tid) => { const w = global.nimbus.lastFocused; w.closeTab(w.tabById(tid), { remember: false }); }, id);
+    await sleep(60);
+    const ghost = await ui.evaluate((tid) => { const e = document.querySelector(`.tab[data-id="${tid}"]`); return e && e.dataset.leaving ? Math.round(e.getBoundingClientRect().width) : null; }, id);
+    assert(ghost !== null && ghost < final, 'shrinking ghost ' + ghost);
+    await waitFor(async () => !(await ui.$(`.tab[data-id="${id}"]`)), 'ghost removed');
+    // with animations switched off everything happens instantly
+    await M(() => global.nimbus.settings.set('appearance.animations', false));
+    await sleep(200);
+    const id2 = await M(() => global.nimbus.lastFocused.createTab({ url: 'data:text/html,<title>Sofort</title>x', active: false, atEnd: true }).id);
+    await sleep(40);
+    const running = await ui.evaluate((tid) => { const e = document.querySelector(`.tab[data-id="${tid}"]`); return e ? e.getAnimations().length : -1; }, id2);
+    assert(running === 0, 'no animation when disabled: ' + running);
+    await M(() => global.nimbus.settings.set('appearance.animations', true));
+    await M(() => global.nimbus.settings.set('layout.tabStyle', 'drift'));
   });
 
   await check('Tab-Stil Faden verbindet Kind-Tabs mit ihrem Ursprung', async () => {
@@ -523,6 +576,9 @@ function screenshot(name) {
   await check('Drift + Faden auch seitlich (Baum + kompakte Zeilen)', async () => {
     await M(() => { global.nimbus.settings.set('layout.tabStyle', 'combo'); global.nimbus.settings.set('layout.tabPosition', 'left'); global.nimbus.settings.set('appearance.mode', 'dark'); });
     await waitFor(async () => (await ui.$$('#vtabs > .tab.child')).length >= 1, 'vertical child');
+    // age one background tab so a compact "drop" row exists
+    await M(() => { const w = global.nimbus.lastFocused; const t = w.tabs.find((x) => x !== w.activeTab && !w.visibleTabs().includes(x)); if (t) t.lastActive = Date.now() - 5 * 3600e3; w.scheduleState(); });
+    await waitFor(async () => (await ui.$$('#vtabs > .tab[data-tier="drop"]')).length >= 1, 'aged tab');
     const ml = await ui.$eval('#vtabs > .tab.child', (e) => parseFloat(getComputedStyle(e).marginLeft));
     assert(ml >= 14, 'indented ' + ml);
     assert((await ui.$$('#vtabs > .tab[data-tier="drop"]')).length >= 1, 'compact drop rows');

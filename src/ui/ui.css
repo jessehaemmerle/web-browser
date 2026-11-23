@@ -318,7 +318,8 @@ body.html-fullscreen #tabstrip, body.html-fullscreen #toolbar, body.html-fullscr
 
 /* =================================================================== tab styles */
 /* ---- Drift: tabs drift from wide (active) to small drops (long unused / asleep) */
-body.ts-drift .tabs:not(.vertical) .tab { transition: width .32s ease, flex-basis .32s ease, min-width .32s ease, border-radius .32s ease, margin .32s ease, height .32s ease, background var(--n-speed), color var(--n-speed), opacity .4s; }
+/* widths are animated by the FLIP layer in ui.js; CSS handles shape and colour */
+body.ts-drift .tabs:not(.vertical) .tab { transition: border-radius .25s ease, margin .25s ease, height .25s ease, background var(--n-speed), color var(--n-speed), opacity .4s; }
 body.ts-drift .tabs:not(.vertical) .tab[data-tier="active"] { --tab-w: 260px; }
 body.ts-drift .tabs:not(.vertical) .tab[data-tier="mid"] { --tab-w: 156px; --tab-min: 64px; }
 body.ts-drift .tabs:not(.vertical) .tab[data-tier="old"] { --tab-w: 108px; --tab-min: 56px; color: color-mix(in srgb, var(--n-muted) 85%, transparent); }
@@ -345,13 +346,13 @@ body.ts-drift .tabs.vertical .tab[data-tier="drop"] { height: calc(var(--n-tab-h
 body.ts-drift .tabs.vertical .tab[data-tier="drop"] .tab-icon { transform: scale(.8); }
 
 /* ---- Lens: small tabs that magnify around the pointer (widths set by JS) */
-body.ts-lens .tabs:not(.vertical) .tab:not(.pinned) { flex: none; min-width: 0; max-width: none; transition: width 110ms ease-out, background var(--n-speed); }
+body.ts-lens .tabs:not(.vertical) .tab:not(.pinned) { flex: none; min-width: 0; max-width: none; transition: width 150ms cubic-bezier(.2, .8, .2, 1), background var(--n-speed); }
 body.ts-lens .tabs:not(.vertical) .tab.lens-small { padding: 0; justify-content: center; }
 body.ts-lens .tabs:not(.vertical) .tab.lens-small .tab-text,
 body.ts-lens .tabs:not(.vertical) .tab.lens-small .tab-close,
 body.ts-lens .tabs:not(.vertical) .tab.lens-small .tab-audio { display: none; }
 body.ts-lens .tabs:not(.vertical) .tab.lens-small:not(.active):not(:hover)::before { display: none; }
-body.ts-lens .tabs.vertical .tab { transition: height 110ms ease-out, background var(--n-speed); }
+body.ts-lens .tabs.vertical .tab { transition: height 150ms cubic-bezier(.2, .8, .2, 1), background var(--n-speed); }
 body.ts-lens .tabs.vertical .tab.magnified .tab-sub { display: block; }
 body.ts-lens .tabs.vertical .tab.magnified .tab-icon { transform: scale(1.15); }
 body.ts-lens .tabs.vertical .tab .tab-icon { transition: transform 110ms ease-out; }
@@ -448,3 +449,7 @@ body.bar-tinted .private-badge { background: var(--n-text); color: var(--n-frame
 body.bar-tinted .site-btn.insecure { color: inherit; }
 body.bar-tinted-dark browser-action-list::part(action) { filter: drop-shadow(0 0 1px rgba(0,0,0,.35)); }
 @media (prefers-reduced-motion: reduce) { #tabstrip, #toolbar, #bookmarks-bar { transition: none; } }
+
+/* tabs on their way out */
+.tab[data-leaving] { overflow: hidden; }
+.tab[data-leaving] .tab-close, .tab[data-leaving] .tab-audio { visibility: hidden; }

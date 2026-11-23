@@ -535,8 +535,11 @@
     const now = Date.now();
     const container = tabsContainer();
     const other = container.id === 'tabs' ? $('#vtabs') : $('#tabs');
+    const switched = [...other.children].some((n) => n.classList.contains('tab'));
     // move existing elements if layout switched
-    for (const n of [...other.children]) if (!n.classList.contains('drop-indicator')) container.append(n);
+    for (const n of [...other.children]) if (!n.classList.contains('drop-indicator')) { if (n.dataset.leaving) n.remove(); else container.append(n); }
+    // remember where everything was, to animate towards the new layout
+    const before = motionOn() && !switched && !dragState && !(lensActive && hasStyle('lens')) && container.isConnected && container.offsetParent ? snapshotTabs(container) : null;
     const stacks = computeStacks();
     lastStacks = stacks;
     if (expandedStack && !stacks.has(expandedStack)) expandedStack = null;
@@ -582,19 +585,36 @@
       emitTab(tab);
     }
     const shown = new Set(wanted);
+    const leaving = [];
     for (const [id, node] of tabEls) {
-      if (!state.tabs.some((x) => x.id === id)) { node.remove(); tabEls.delete(id); }
-      else if (!shown.has(node)) node.remove();
+      if (!state.tabs.some((x) => x.id === id)) {
+        tabEls.delete(id);
+        if (before && before.has(node)) leaving.push(node); else node.remove();
+      } else if (!shown.has(node)) node.remove();
     }
+    // where each leaving tab sat, so it can shrink away in place
+    const leavingAnchor = new Map(leaving.map((n) => { let nx = n.nextElementSibling; while (nx && (nx.dataset.leaving || leaving.includes(nx))) nx = nx.nextElementSibling; return [n, nx]; }));
     for (const [id, node] of groupEls) if (!seenGroups.has(id)) { node.remove(); groupEls.delete(id); }
     for (const [k, node] of stackEls) if (!emittedStacks.has(k)) { node.remove(); stackEls.delete(k); }
     // reorder only when needed
-    const current = [...container.children].filter((n) => !n.classList.contains('drop-indicator'));
+    const current = [...container.children].filter((n) => !n.classList.contains('drop-indicator') && !n.dataset.leaving && !leaving.includes(n));
     const same = current.length === wanted.length && current.every((n, i) => n === wanted[i]);
-    if (!same) for (const n of wanted) container.append(n);
+    // a reorder means more than tabs coming and going
+    const kept = wanted.filter((n) => current.includes(n));
+    const reordered = !same && !kept.every((n, i) => n === current.filter((c) => wanted.includes(c))[i]);
+    if (!same) {
+      for (const n of wanted) container.append(n);
+      for (const n of container.querySelectorAll('[data-leaving]')) container.append(n);
+    }
+    for (const n of leaving) {
+      const anchor = leavingAnchor.get(n);
+      if (anchor && anchor.parentElement === container) container.insertBefore(n, anchor); else if (n.parentElement !== container) container.append(n);
+    }
     applyThreadClasses();
     fitTabs();
-    if (hasStyle('lens')) resetLens();
+    if (hasStyle('lens')) refreshLens();
+    if (before) { for (const n of leaving) leaveTab(n, container); animateTabs(container, before, reordered); }
+    else for (const n of leaving) n.remove();
     scheduleThreads();
     const act = tabEls.get(state.activeId);
     if (act && !dragState && !lensActive) act.scrollIntoView({ block: 'nearest', inline: 'nearest' });
@@ -672,38 +692,57 @@
   }
   $('#tabs').addEventListener('scroll', () => scheduleThreads(), { passive: true });
 
-  // ---- lens: tabs near the pointer grow, the rest stay small
+  // ---- lens: tabs near the pointer grow, the rest stay small (always on, any number of tabs)
   let lensActive = false;
-  const LENS = { minW: 40, maxW: 220, minH: 26, maxH: 50 };
-  function lensItems() { return [...tabsContainer().children].filter((n) => (n.classList.contains('tab') && !n.classList.contains('group-hidden') && !n.classList.contains('pinned'))); }
-  function lensNeeded(items) {
-    if (isVertical()) return true;
+  let lensPoint = null;
+  let lensFrame = 0;
+  const LENS = { minW: 44, activeW: 132, maxW: 228, minH: 26, maxH: 52 };
+  function lensItems() { return [...tabsContainer().children].filter((n) => n.classList.contains('tab') && !n.classList.contains('group-hidden') && !n.classList.contains('pinned') && !n.dataset.leaving); }
+  /** Width of a resting tab: small, but shrink further so the magnified ones still fit. */
+  function lensSmall(count) {
     const avail = $('#tabstrip').clientWidth - 140;
-    return items.length * 150 > avail;
+    const room = avail - LENS.activeW - 440; // ~440px are needed for the magnified neighbours
+    return Math.max(32, Math.min(LENS.minW, room / Math.max(1, count - 1)));
   }
   function resetLens() {
     lensActive = false;
     const items = lensItems();
     const vertical = isVertical();
-    const needed = lensNeeded(items);
+    const small = lensSmall(items.length);
     for (const n of items) {
       n.classList.remove('magnified');
-      if (vertical) { n.style.height = (n.classList.contains('active') ? LENS.maxH - 10 : LENS.minH + 4) + 'px'; n.classList.toggle('lens-small', false); continue; }
-      const w = !needed ? 150 : n.classList.contains('active') ? 190 : LENS.minW;
+      if (vertical) { n.style.height = (n.classList.contains('active') ? LENS.maxH - 12 : LENS.minH + 4) + 'px'; n.classList.remove('lens-small'); continue; }
+      const w = n.classList.contains('active') ? LENS.activeW : small;
       n.style.width = w + 'px';
       n.classList.toggle('lens-small', w < 76);
     }
   }
-  function applyLens(e) {
+  function applyLens(pt) {
     const items = lensItems();
-    if (!items.length || !lensNeeded(items)) return;
+    if (!items.length || !pt) return;
     const vertical = isVertical();
-    const hovered = items.find((n) => { const r = n.getBoundingClientRect(); return vertical ? e.clientY >= r.top && e.clientY < r.bottom : e.clientX >= r.left && e.clientX < r.right; });
-    if (!hovered) return;
+    const small = lensSmall(items.length);
+    const rest = (n) => (vertical ? (n.classList.contains('active') ? LENS.maxH - 12 : LENS.minH + 4) : n.classList.contains('active') ? LENS.activeW : small);
+    // positions in the resting (unmagnified) layout – like the macOS Dock, so the lens
+    // does not wander away from a pointer that stands still
+    let shift = 0;
+    const slots = items.map((n) => {
+      const r = n.getBoundingClientRect();
+      const cur = vertical ? r.height : r.width;
+      const start = (vertical ? r.top : r.left) - shift;
+      const size = rest(n);
+      shift += cur - size;
+      return { start, size };
+    });
+    const p = vertical ? pt.clientY : pt.clientX;
+    let idx = slots.findIndex((sl) => p >= sl.start && p < sl.start + sl.size);
+    if (idx < 0) {
+      if (p < slots[0].start || p >= slots[slots.length - 1].start + slots[slots.length - 1].size + 24) return;
+      idx = slots.length - 1;
+    }
     lensActive = true;
-    const r = hovered.getBoundingClientRect();
-    const frac = vertical ? (e.clientY - r.top) / r.height : (e.clientX - r.left) / r.width;
-    const h = items.indexOf(hovered) + Math.max(0, Math.min(1, frac)) - 0.5;
+    const frac = Math.max(0, Math.min(1, (p - slots[idx].start) / slots[idx].size));
+    const h = idx + frac - 0.5;
     items.forEach((n, i) => {
       const k = Math.exp(-Math.pow((i - h) / 1.35, 2));
       if (vertical) {
@@ -711,18 +750,85 @@
         n.style.height = size.toFixed(1) + 'px';
         n.classList.toggle('magnified', size > 40);
       } else {
-        const base = n.classList.contains('active') ? 120 : LENS.minW;
+        const base = rest(n);
         const w = base + (LENS.maxW - base) * k;
         n.style.width = w.toFixed(1) + 'px';
         n.classList.toggle('lens-small', w < 76);
       }
     });
   }
+  /** Called after every re-render: keep the magnification while the pointer is over the tabs. */
+  function refreshLens() {
+    const c = tabsContainer();
+    if (lensPoint && c.matches(':hover') && !dragState) applyLens(lensPoint); else resetLens();
+  }
   for (const c of [$('#tabs'), $('#vtabs')]) {
-    c.addEventListener('mousemove', (e) => { if (hasStyle('lens') && !dragState) requestAnimationFrame(() => applyLens(e)); });
-    c.addEventListener('mouseleave', () => { if (hasStyle('lens')) setTimeout(() => { if (!c.matches(':hover')) resetLens(); }, 120); });
+    c.addEventListener('mousemove', (e) => {
+      if (!hasStyle('lens') || dragState) return;
+      lensPoint = { clientX: e.clientX, clientY: e.clientY };
+      if (!lensFrame) lensFrame = requestAnimationFrame(() => { lensFrame = 0; applyLens(lensPoint); });
+    });
+    c.addEventListener('mouseleave', () => {
+      if (!hasStyle('lens')) return;
+      lensPoint = null;
+      setTimeout(() => { if (!c.matches(':hover')) resetLens(); }, 120);
+    });
   }
   function clearLensStyles() { for (const n of [...tabEls.values(), ...stackEls.values()]) { n.style.width = ''; n.style.height = ''; n.classList.remove('lens-small', 'magnified'); } }
+
+  // ---- motion for the tab bar (FLIP): every size/position change animates, for all styles
+  const reduceMotionMq = matchMedia('(prefers-reduced-motion: reduce)');
+  const motionOn = () => S && S.appearance.animations !== false && !reduceMotionMq.matches;
+  const MOTION = { duration: 230, easing: 'cubic-bezier(.2, .8, .2, 1)' };
+  function snapshotTabs(container) {
+    const cr = container.getBoundingClientRect();
+    const map = new Map();
+    for (const n of container.children) {
+      if (!n.classList.contains('tab') && !n.classList.contains('group-chip')) continue;
+      const r = n.getBoundingClientRect();
+      map.set(n, { x: r.left - cr.left + container.scrollLeft, y: r.top - cr.top + container.scrollTop, w: r.width, h: r.height });
+    }
+    return map;
+  }
+  function animateTabs(container, before, reordered) {
+    const vertical = container.classList.contains('vertical');
+    const lens = hasStyle('lens');
+    for (const n of container.children) if (!n.dataset.leaving) for (const a of n.getAnimations()) if (a.id === 'flip') a.cancel();
+    const after = snapshotTabs(container);
+    for (const [n, a] of after) {
+      if (n.dataset.leaving) continue;
+      const b = before.get(n);
+      let anim = null;
+      if (!b) {
+        // new tab grows in
+        anim = vertical
+          ? n.animate([{ height: '0px', opacity: 0, marginTop: '0px', marginBottom: '0px' }, { height: a.h + 'px', opacity: 1 }], MOTION)
+          : n.animate([{ width: '0px', flexBasis: '0px', minWidth: '0px', flexShrink: 0, opacity: 0 }, { width: a.w + 'px', flexBasis: a.w + 'px', minWidth: '0px', flexShrink: 0, opacity: 1 }], MOTION);
+      } else if (reordered) {
+        const dx = b.x - a.x, dy = b.y - a.y;
+        if (Math.abs(dx) > 1 || Math.abs(dy) > 1) anim = n.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'none' }], MOTION);
+      } else if (!vertical && !lens && Math.abs(b.w - a.w) > 1) {
+        // size change (drift ageing, activating, neighbours making room …)
+        anim = n.animate([{ width: b.w + 'px', flexBasis: b.w + 'px', minWidth: '0px', maxWidth: 'none', flexShrink: 0, flexGrow: 0 },
+          { width: a.w + 'px', flexBasis: a.w + 'px', minWidth: '0px', maxWidth: 'none', flexShrink: 0, flexGrow: 0 }], MOTION);
+      }
+      if (anim) anim.id = 'flip';
+    }
+    scheduleThreads();
+  }
+  /** Closed tabs shrink away instead of vanishing. */
+  function leaveTab(node, container) {
+    if (!node.isConnected || node.parentElement !== container) { node.remove(); return; }
+    const vertical = container.classList.contains('vertical');
+    const r = node.getBoundingClientRect();
+    node.dataset.leaving = '1';
+    node.classList.remove('active');
+    node.style.pointerEvents = 'none';
+    const anim = vertical
+      ? node.animate([{ height: r.height + 'px', opacity: 1 }, { height: '0px', opacity: 0, marginTop: '0px', marginBottom: '0px', paddingTop: '0px', paddingBottom: '0px' }], { ...MOTION, fill: 'forwards' })
+      : node.animate([{ width: r.width + 'px', flexBasis: r.width + 'px', minWidth: '0px', flexShrink: 0, opacity: 1 }, { width: '0px', flexBasis: '0px', minWidth: '0px', flexShrink: 0, opacity: 0, paddingLeft: '0px', paddingRight: '0px' }], { ...MOTION, fill: 'forwards' });
+    anim.onfinish = anim.oncancel = () => { node.remove(); scheduleThreads(); };
+  }
 
   // ---- live preview card
   const previewEl = el('div', { class: 'tab-preview', role: 'tooltip', hidden: true });
@@ -842,7 +948,7 @@
   }
   function dropIndex(container, e) {
     const vertical = container.classList.contains('vertical');
-    const items = [...container.querySelectorAll('.tab[data-id]:not(.group-hidden)')];
+    const items = [...container.querySelectorAll('.tab[data-id]:not(.group-hidden):not([data-leaving])')];
     let index = state.tabs.length;
     let ref = null;
     for (const n of items) {
