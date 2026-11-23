@@ -1,7 +1,7 @@
 {
   "name": "nimbus-browser",
   "productName": "Nimbus",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Schneller, einfacher und vollständig anpassbarer Webbrowser für Windows und Linux",
   "main": "src/main/main.js",
   "author": {
